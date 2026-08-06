@@ -35,7 +35,6 @@ class MainActivity : ComponentActivity() {
     private var intensityProgress by mutableIntStateOf(50)
     private var audioSetupIndex by mutableIntStateOf(0)
     private var isLocked by mutableStateOf(false)
-    private var orientationLocked by mutableStateOf(false)
 
     // Audio setup order must match R.array.audio_setup_options.
     private val audioSetupValues = listOf(
@@ -84,7 +83,6 @@ class MainActivity : ComponentActivity() {
                     audioSetupIndex = audioSetupIndex,
                     audioSetupLabels = stringArrayResource(R.array.audio_setup_options).toList(),
                     isLocked = isLocked,
-                    orientationLocked = orientationLocked,
                     onPlayClick = ::onPlayRequested,
                     onStopClick = ::stopLoopback,
                     onModeSelect = ::selectMode,
@@ -93,7 +91,6 @@ class MainActivity : ComponentActivity() {
                     onAudioSetupSelect = ::onAudioSetupSelected,
                     onLockClick = { isLocked = true },
                     onUnlock = { isLocked = false },
-                    onOrientationLockToggle = ::toggleOrientationLock,
                     onMenuClick = {
                         // Settings screen (theme, haptics, RGB edge-lighting, etc.)
                         // is a separate piece of work — stubbed so the button
@@ -220,11 +217,12 @@ class MainActivity : ComponentActivity() {
     // Restricts rotation to portrait and reverse-portrait ourselves. MIUI's
     // built-in "sensorPortrait" handling silently drops the 180° flip, so
     // instead the activity is left as fullSensor in the manifest and we pick
-    // the orientation directly from the raw sensor angle.
+    // the orientation directly from the raw sensor angle. Always active —
+    // there's no user-facing toggle for this anymore.
     private fun setupOrientationLock() {
         orientationEventListener = object : OrientationEventListener(this) {
             override fun onOrientationChanged(orientation: Int) {
-                if (orientationLocked || orientation == ORIENTATION_UNKNOWN) return
+                if (orientation == ORIENTATION_UNKNOWN) return
                 when {
                     orientation in 0..29 || orientation in 331..360 ->
                         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -237,15 +235,6 @@ class MainActivity : ComponentActivity() {
         if (orientationEventListener?.canDetectOrientation() == true) {
             orientationEventListener?.enable()
         }
-    }
-
-    private fun toggleOrientationLock() {
-        orientationLocked = !orientationLocked
-        Toast.makeText(
-            this,
-            if (orientationLocked) "Rotation locked" else "Rotation follows sensor",
-            Toast.LENGTH_SHORT,
-        ).show()
     }
 
     override fun onStart() {

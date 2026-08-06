@@ -5,6 +5,9 @@ on:
     branches: [ "main" ]
   workflow_dispatch: {}   # lets you trigger it manually from the Actions tab too
 
+permissions:
+  contents: write   # needed to publish the release below
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,8 +28,22 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK (build artifact, requires login to fetch)
         uses: actions/upload-artifact@v4
         with:
           name: micblast-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      # Gives you a stable, directly-downloadable link — no login needed for
+      # a public repo, and it always points at the newest build:
+      #   https://github.com/<owner>/<repo>/releases/download/latest/app-debug.apk
+      - name: Publish APK to the "latest" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          body: |
+            Automatically rebuilt from the newest push to `main`
+            (commit ${{ github.sha }}).
+          prerelease: true
+          files: app/build/outputs/apk/debug/app-debug.apk

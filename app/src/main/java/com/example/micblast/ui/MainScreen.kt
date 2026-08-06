@@ -14,7 +14,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,8 +34,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.ScreenLockPortrait
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -60,13 +60,17 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -96,7 +100,6 @@ fun MainScreen(
     audioSetupIndex: Int,
     audioSetupLabels: List<String>,
     isLocked: Boolean,
-    orientationLocked: Boolean,
     onPlayClick: () -> Unit,
     onStopClick: () -> Unit,
     onModeSelect: (String) -> Unit,
@@ -105,7 +108,6 @@ fun MainScreen(
     onAudioSetupSelect: (Int) -> Unit,
     onLockClick: () -> Unit,
     onUnlock: () -> Unit,
-    onOrientationLockToggle: () -> Unit,
     onMenuClick: () -> Unit,
 ) {
     val colors = MaterialTheme.microBlastColors
@@ -143,24 +145,14 @@ fun MainScreen(
 
             VSpace(22.dp)
 
-            ModeGrid(currentMode = currentMode, onModeSelect = onModeSelect)
-
-            VSpace(20.dp)
-
-            IntensitySection(
-                progress = intensityProgress,
-                enabled = currentMode != AudioLoopbackService.MODE_NORMAL,
-                onProgressChange = onIntensityChange,
+            ModeAndIntensityGroup(
+                currentMode = currentMode,
+                onModeSelect = onModeSelect,
+                intensityProgress = intensityProgress,
+                intensityEnabled = currentMode != AudioLoopbackService.MODE_NORMAL,
+                onIntensityChange = onIntensityChange,
             )
         }
-
-        OrientationLockFab(
-            locked = orientationLocked,
-            onToggle = onOrientationLockToggle,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(20.dp),
-        )
 
         if (isLocked) {
             LockOverlay(onUnlock = onUnlock)
@@ -368,8 +360,20 @@ private fun LoudnessSection(progress: Int, onProgressChange: (Int) -> Unit) {
     }
 }
 
+/**
+ * Voice modes and their intensity live in one card so both controls sit
+ * under the same thumb: the 2x2 mode grid on the left, a compact vertical
+ * intensity slider on the right — reachable without shifting grip when
+ * holding the phone one-handed.
+ */
 @Composable
-private fun ModeGrid(currentMode: String, onModeSelect: (String) -> Unit) {
+private fun ModeAndIntensityGroup(
+    currentMode: String,
+    onModeSelect: (String) -> Unit,
+    intensityProgress: Int,
+    intensityEnabled: Boolean,
+    onIntensityChange: (Int) -> Unit,
+) {
     val colors = MaterialTheme.microBlastColors
     val modes = listOf(
         VoiceModeUi(AudioLoopbackService.MODE_NORMAL, stringResource(R.string.mode_normal), colors.accentCyan),
@@ -384,22 +388,36 @@ private fun ModeGrid(currentMode: String, onModeSelect: (String) -> Unit) {
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        Row(
+            modifier = Modifier
+                .padding(14.dp)
+                .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            modes.chunked(2).forEach { rowModes ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    rowModes.forEach { mode ->
-                        ModeButton(
-                            mode = mode,
-                            selected = mode.id == currentMode,
-                            onClick = { onModeSelect(mode.id) },
-                            modifier = Modifier.weight(1f),
-                        )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                modes.chunked(2).forEach { rowModes ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        rowModes.forEach { mode ->
+                            ModeButton(
+                                mode = mode,
+                                selected = mode.id == currentMode,
+                                onClick = { onModeSelect(mode.id) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }
+
+            IntensityColumn(
+                progress = intensityProgress,
+                enabled = intensityEnabled,
+                onProgressChange = onIntensityChange,
+                modifier = Modifier.fillMaxHeight(),
+            )
         }
     }
 }
@@ -426,38 +444,46 @@ private fun ModeButton(mode: VoiceModeUi, selected: Boolean, onClick: () -> Unit
     }
 }
 
+/**
+ * Compact vertical companion to the mode grid: "Extreme" sits at the top,
+ * "Subtle" at the bottom, and the slider is thumb-height rather than
+ * full-width, matching the small footprint this control gets next to the
+ * grid.
+ */
 @Composable
-private fun IntensitySection(progress: Int, enabled: Boolean, onProgressChange: (Int) -> Unit) {
+private fun IntensityColumn(
+    progress: Int,
+    enabled: Boolean,
+    onProgressChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = MaterialTheme.microBlastColors
     val sectionAlpha = if (enabled) 1f else 0.4f
 
-    Text(
-        text = stringResource(R.string.intensity_label),
-        color = colors.textPrimary,
-        fontWeight = FontWeight.Bold,
-        fontSize = 13.sp,
-        modifier = Modifier
-            .padding(bottom = 6.dp)
+    Column(
+        modifier = modifier
+            .width(48.dp)
             .alpha(sectionAlpha),
-    )
-
-    Box(modifier = Modifier.alpha(sectionAlpha)) {
-        NeonSlider(progress = progress, onProgressChange = onProgressChange, enabled = enabled)
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .alpha(sectionAlpha),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(stringResource(R.string.intensity_min), color = colors.textSecondary, fontSize = 11.sp, modifier = Modifier.weight(1f))
         Text(
-            stringResource(R.string.intensity_max),
-            color = colors.textSecondary,
-            fontSize = 11.sp,
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(1f),
+            text = stringResource(R.string.intensity_label),
+            color = colors.textPrimary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 4.dp),
         )
+        Text(stringResource(R.string.intensity_max), color = colors.textSecondary, fontSize = 10.sp)
+        VerticalNeonSlider(
+            progress = progress,
+            onProgressChange = onProgressChange,
+            enabled = enabled,
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 2.dp),
+        )
+        Text(stringResource(R.string.intensity_min), color = colors.textSecondary, fontSize = 10.sp)
     }
 }
 
@@ -488,22 +514,54 @@ private fun NeonSlider(progress: Int, onProgressChange: (Int) -> Unit, enabled: 
     )
 }
 
+/**
+ * Compose has no built-in vertical slider, so this rotates a normal one
+ * 270° and swaps its measured width/height — the standard workaround.
+ * Dragging up increases the value, matching the "Extreme" label above it.
+ */
 @Composable
-private fun OrientationLockFab(locked: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+private fun VerticalNeonSlider(
+    progress: Int,
+    onProgressChange: (Int) -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
     val colors = MaterialTheme.microBlastColors
-    IconButton(
-        onClick = onToggle,
+    val fraction = (progress / 100f).coerceIn(0f, 1f)
+    val thumbColor = lerp(colors.accentCyan, colors.accentMagenta, fraction)
+
+    Slider(
+        value = progress.toFloat(),
+        onValueChange = { onProgressChange(it.roundToInt()) },
+        valueRange = 0f..100f,
+        enabled = enabled,
+        colors = SliderDefaults.colors(
+            thumbColor = thumbColor,
+            activeTrackColor = thumbColor,
+            inactiveTrackColor = colors.surfaceAlt,
+            disabledThumbColor = thumbColor,
+            disabledActiveTrackColor = thumbColor,
+            disabledInactiveTrackColor = colors.surfaceAlt,
+        ),
         modifier = modifier
-            .size(36.dp)
-            .border(1.dp, colors.borderFaint, CircleShape),
-    ) {
-        Icon(
-            imageVector = if (locked) Icons.Filled.ScreenLockPortrait else Icons.Filled.RestartAlt,
-            contentDescription = null,
-            tint = colors.accentCyan,
-            modifier = Modifier.size(18.dp),
-        )
-    }
+            .graphicsLayer {
+                rotationZ = 270f
+                transformOrigin = TransformOrigin(0f, 0f)
+            }
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(
+                    Constraints(
+                        minWidth = constraints.minHeight,
+                        maxWidth = constraints.maxHeight,
+                        minHeight = constraints.minWidth,
+                        maxHeight = constraints.maxWidth,
+                    ),
+                )
+                layout(placeable.height, placeable.width) {
+                    placeable.place(-placeable.width + placeable.height, 0)
+                }
+            },
+    )
 }
 
 /**
@@ -527,14 +585,33 @@ private fun LockOverlay(onUnlock: () -> Unit) {
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.82f))
             .pointerInput(Unit) {
+                // pointerInput(Unit) builds this whole gesture-callback
+                // block exactly once and never rebuilds it on recomposition
+                // (its key never changes) — so any *plain* local value
+                // captured here (like the outer `maxDragPx`/`fraction` vals)
+                // stays frozen forever at whatever it was during that first
+                // build, which happens before layout has measured the
+                // track (trackWidthPx still at its 1f default). That
+                // freeze is the actual cause of the old bug: the drag still
+                // *rendered* correctly (the Box below reads live state
+                // directly), but the release check compared against a
+                // bound computed from an unmeasured track, so it could
+                // never legitimately reach 0.95 and onUnlock() never fired.
+                // trackWidthPx/dragPx themselves are `remember`ed state, so
+                // reading THEM (not a derived val) inside this closure is
+                // always live — recomputing the bound from them inline,
+                // every time, is what actually fixes it.
                 detectHorizontalDragGestures(
                     onDragStart = { dragPx = 0f },
                     onHorizontalDrag = { change, dragAmount ->
                         change.consume()
-                        dragPx = (dragPx + dragAmount).coerceIn(0f, maxDragPx)
+                        val liveMaxDragPx = (trackWidthPx - thumbSizePx).coerceAtLeast(1f)
+                        dragPx = (dragPx + dragAmount).coerceIn(0f, liveMaxDragPx)
                     },
                     onDragEnd = {
-                        if (fraction >= 0.95f) onUnlock()
+                        val liveMaxDragPx = (trackWidthPx - thumbSizePx).coerceAtLeast(1f)
+                        val releaseFraction = (dragPx / liveMaxDragPx).coerceIn(0f, 1f)
+                        if (releaseFraction >= 0.95f) onUnlock()
                         dragPx = 0f
                     },
                     onDragCancel = { dragPx = 0f },
