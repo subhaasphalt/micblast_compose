@@ -1,0 +1,10 @@
+<resources>
+    <!-- Framework theme only: sets the pre-draw window background and system
+         bar colors before Compose takes over. All actual UI theming (colors,
+         shapes, typography) lives in ui/theme/Theme.kt now, not here. -->
+    <style name="Theme.MicBlast" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/neon_bg_top</item>
+        <item name="android:statusBarColor">@color/neon_bg_top</item>
+        <item name="android:navigationBarColor">@color/neon_bg_top</item>
+    </style>
+</resources>

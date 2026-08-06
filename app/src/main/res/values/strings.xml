@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">MicBlast</string>
+    <string name="app_title">Funny Karaoke Machine</string>
+    <string name="loudness_label">Loudness Boost</string>
+    <string name="loudness_min">1.0×</string>
+    <string name="loudness_max">2.0×</string>
+    <string name="loudness_tooltip">Use your phone\'s volume buttons for overall volume. This boosts loudness beyond max, like VLC/MX Player software gain.</string>
+    <string name="loudness_info_cd">Loudness Boost info</string>
+    <string name="menu_button_cd">Open menu</string>
+    <string name="settings_coming_soon">Settings menu coming soon</string>
+    <string name="mode_normal">Normal</string>
+    <string name="mode_chipmunk">Chipmunk</string>
+    <string name="mode_deep">Monster</string>
+    <string name="mode_robot">Robot</string>
+    <string name="audio_setup_label">Audio Setup</string>
+    <string name="setup_wired">🎧 Wired earphone mic → phone speaker</string>
+    <string name="setup_bt_mic">🎧 Bluetooth earbuds mic → phone speaker</string>
+    <string name="setup_bt_speaker">🎤 Phone mic → Bluetooth speaker / boombox</string>
+    <string name="lock_button">🔒</string>
+    <string name="lock_button_cd">Lock controls</string>
+    <string name="slide_to_unlock">Slide to unlock</string>
+    <string name="intensity_label">Voice Intensity</string>
+    <string name="intensity_min">Subtle</string>
+    <string name="intensity_max">Extreme</string>
+    <string name="orientation_unlocked_icon">⟳</string>
+    <string name="orientation_locked_icon">⟳🔒</string>
+
+    <string-array name="audio_setup_options">
+        <item>@string/setup_wired</item>
+        <item>@string/setup_bt_mic</item>
+        <item>@string/setup_bt_speaker</item>
+    </string-array>
+</resources>

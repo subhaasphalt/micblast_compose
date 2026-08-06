@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Backdrop -->
+    <color name="neon_bg_top">#0B0A1A</color>
+    <color name="neon_bg_bottom">#000005</color>
+
+    <!-- Surfaces -->
+    <color name="neon_surface">#13122A</color>
+    <color name="neon_surface_alt">#1B1A38</color>
+    <color name="neon_border_faint">#332F5C</color>
+
+    <!-- Accents -->
+    <color name="neon_cyan">#00E8FF</color>
+    <color name="neon_cyan_glow_soft">#1A00E8FF</color>
+    <color name="neon_cyan_glow_mid">#4000E8FF</color>
+    <color name="neon_magenta">#FF2FD1</color>
+    <color name="neon_magenta_glow_soft">#1AFF2FD1</color>
+    <color name="neon_magenta_glow_mid">#40FF2FD1</color>
+    <color name="neon_green">#39FF9E</color>
+    <color name="neon_green_glow_soft">#1A39FF9E</color>
+    <color name="neon_purple">#7C5CFF</color>
+    <color name="neon_purple_glow_soft">#1A7C5CFF</color>
+
+    <!-- Text -->
+    <color name="neon_text_primary">#F3F4FF</color>
+    <color name="neon_text_secondary">#9AA0C9</color>
+</resources>
