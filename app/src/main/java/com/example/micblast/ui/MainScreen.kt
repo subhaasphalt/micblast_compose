@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -35,12 +37,8 @@ import androidx.compose.material.icons.filled.ScreenLockPortrait
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenu
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -246,7 +244,6 @@ private fun PrimaryActionButton(isRunning: Boolean, onPlayClick: () -> Unit, onS
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AudioSetupDropdown(selectedIndex: Int, labels: List<String>, onSelect: (Int) -> Unit) {
     val colors = MaterialTheme.microBlastColors
@@ -261,12 +258,18 @@ private fun AudioSetupDropdown(selectedIndex: Int, labels: List<String>, onSelec
             fontSize = 13.sp,
             modifier = Modifier.padding(bottom = 6.dp),
         )
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        Box(modifier = Modifier.fillMaxWidth()) {
             TextField(
                 value = selectedLabel,
                 onValueChange = {},
                 readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                trailingIcon = {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                        contentDescription = null,
+                        tint = colors.textSecondary,
+                    )
+                },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = colors.surface,
                     unfocusedContainerColor = colors.surface,
@@ -275,11 +278,19 @@ private fun AudioSetupDropdown(selectedIndex: Int, labels: List<String>, onSelec
                     focusedIndicatorColor = colors.borderFaint,
                     unfocusedIndicatorColor = colors.borderFaint,
                 ),
-                modifier = Modifier
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
             )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            // Transparent overlay so taps toggle the menu even though the field itself is read-only.
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable { expanded = !expanded },
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 labels.forEachIndexed { index, label ->
                     DropdownMenuItem(
                         text = { Text(label, color = colors.textPrimary) },
