@@ -15,10 +15,32 @@ android {
         versionName "1.0"
     }
 
+    signingConfigs {
+        debug {
+            // Committed to the repo on purpose: GitHub Actions runners are
+            // fresh VMs every run, so without a fixed keystore here, AGP
+            // silently auto-generates a brand new one on every build. Each
+            // resulting APK gets signed with a different, random
+            // certificate — and Android refuses to install an APK over an
+            // existing app unless the signing certificate matches. The
+            // practical effect was every new build silently failing to
+            // actually update the app on-device (or requiring a full
+            // uninstall first), which looked exactly like "I built the
+            // fixes but the app didn't change."
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.debug
         }
     }
 
