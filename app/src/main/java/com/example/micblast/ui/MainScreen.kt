@@ -6,10 +6,13 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,19 +61,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -212,6 +213,13 @@ private fun PrimaryActionButton(isRunning: Boolean, onPlayClick: () -> Unit, onS
         transitionSpec = {
             scaleIn(tween(260), initialScale = 0.6f) togetherWith scaleOut(tween(200), targetScale = 0.6f)
         },
+        // AnimatedContent defaults to top-start alignment. The play (96dp)
+        // and stop (84dp) circles are different sizes, so without an
+        // explicit center they don't share a center point — during the
+        // cross-fade (and even at rest, since both frames briefly overlap)
+        // that showed up as a sliver of the outgoing color peeking out past
+        // the incoming circle's edge instead of a clean concentric morph.
+        contentAlignment = Alignment.Center,
         label = "playStopMorph",
     ) { running ->
         val diameter = if (running) 84.dp else 96.dp
@@ -392,7 +400,8 @@ private fun ModeAndIntensityGroup(
             modifier = Modifier
                 .padding(14.dp)
                 .height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
                 modifier = Modifier.weight(1f),
@@ -411,6 +420,16 @@ private fun ModeAndIntensityGroup(
                     }
                 }
             }
+
+            // Thin separator so the intensity control reads as its own
+            // region within the shared card, rather than crowding straight
+            // into the grid.
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(1.dp)
+                    .background(colors.borderFaint),
+            )
 
             IntensityColumn(
                 progress = intensityProgress,
@@ -446,9 +465,10 @@ private fun ModeButton(mode: VoiceModeUi, selected: Boolean, onClick: () -> Unit
 
 /**
  * Compact vertical companion to the mode grid: "Extreme" sits at the top,
- * "Subtle" at the bottom, and the slider is thumb-height rather than
- * full-width, matching the small footprint this control gets next to the
- * grid.
+ * "Subtle" at the bottom, and the slider is a small hand-drawn control
+ * rather than a stock full-width Slider rotated on its side — that rotated
+ * approach kept its default (much larger) thumb size, which overflowed
+ * this narrow column and clipped the labels next to it.
  */
 @Composable
 private fun IntensityColumn(
@@ -462,7 +482,7 @@ private fun IntensityColumn(
 
     Column(
         modifier = modifier
-            .width(48.dp)
+            .width(64.dp)
             .alpha(sectionAlpha),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -470,19 +490,20 @@ private fun IntensityColumn(
             text = stringResource(R.string.intensity_label),
             color = colors.textPrimary,
             fontWeight = FontWeight.Bold,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 4.dp),
+            modifier = Modifier.padding(bottom = 10.dp),
         )
         Text(stringResource(R.string.intensity_max), color = colors.textSecondary, fontSize = 10.sp)
+        VSpace(6.dp)
         VerticalNeonSlider(
             progress = progress,
             onProgressChange = onProgressChange,
             enabled = enabled,
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 2.dp),
+            modifier = Modifier.weight(1f),
         )
+        VSpace(6.dp)
         Text(stringResource(R.string.intensity_min), color = colors.textSecondary, fontSize = 10.sp)
     }
 }
@@ -515,9 +536,11 @@ private fun NeonSlider(progress: Int, onProgressChange: (Int) -> Unit, enabled: 
 }
 
 /**
- * Compose has no built-in vertical slider, so this rotates a normal one
- * 270° and swaps its measured width/height — the standard workaround.
- * Dragging up increases the value, matching the "Extreme" label above it.
+ * A small hand-drawn vertical slider — a thin track plus a round thumb,
+ * matching the app's neon style directly instead of rotating a full-size
+ * Material Slider (whose default thumb was too large for this narrow
+ * column and overflowed into the labels beside it). Dragging or tapping
+ * anywhere in the column moves the thumb; up increases the value.
  */
 @Composable
 private fun VerticalNeonSlider(
@@ -529,39 +552,64 @@ private fun VerticalNeonSlider(
     val colors = MaterialTheme.microBlastColors
     val fraction = (progress / 100f).coerceIn(0f, 1f)
     val thumbColor = lerp(colors.accentCyan, colors.accentMagenta, fraction)
+    val trackColor = colors.surfaceAlt
+    val density = LocalDensity.current
+    val thumbRadiusPx = with(density) { 8.dp.toPx() }
+    val trackStrokeWidthPx = with(density) { 4.dp.toPx() }
+    var heightPx by remember { mutableFloatStateOf(1f) }
 
-    Slider(
-        value = progress.toFloat(),
-        onValueChange = { onProgressChange(it.roundToInt()) },
-        valueRange = 0f..100f,
-        enabled = enabled,
-        colors = SliderDefaults.colors(
-            thumbColor = thumbColor,
-            activeTrackColor = thumbColor,
-            inactiveTrackColor = colors.surfaceAlt,
-            disabledThumbColor = thumbColor,
-            disabledActiveTrackColor = thumbColor,
-            disabledInactiveTrackColor = colors.surfaceAlt,
-        ),
+    fun updateFromY(y: Float) {
+        val usableHeight = (heightPx - 2 * thumbRadiusPx).coerceAtLeast(1f)
+        val clampedY = (y - thumbRadiusPx).coerceIn(0f, usableHeight)
+        val newFraction = 1f - (clampedY / usableHeight)
+        onProgressChange((newFraction * 100f).roundToInt().coerceIn(0, 100))
+    }
+
+    Box(
         modifier = modifier
-            .graphicsLayer {
-                rotationZ = 270f
-                transformOrigin = TransformOrigin(0f, 0f)
+            .width(28.dp)
+            .fillMaxHeight()
+            .onGloballyPositioned { heightPx = it.size.height.toFloat() }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectTapGestures { offset -> updateFromY(offset.y) }
             }
-            .layout { measurable, constraints ->
-                val placeable = measurable.measure(
-                    Constraints(
-                        minWidth = constraints.minHeight,
-                        maxWidth = constraints.maxHeight,
-                        minHeight = constraints.minWidth,
-                        maxHeight = constraints.maxWidth,
-                    ),
-                )
-                layout(placeable.height, placeable.width) {
-                    placeable.place(-placeable.width + placeable.height, 0)
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectVerticalDragGestures { change, _ ->
+                    change.consume()
+                    updateFromY(change.position.y)
                 }
             },
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val usableHeight = (size.height - 2 * thumbRadiusPx).coerceAtLeast(1f)
+            val centerX = size.width / 2f
+            val trackTop = thumbRadiusPx
+            val trackBottom = size.height - thumbRadiusPx
+            val thumbY = trackBottom - usableHeight * fraction
+
+            drawLine(
+                color = trackColor,
+                start = Offset(centerX, trackTop),
+                end = Offset(centerX, trackBottom),
+                strokeWidth = trackStrokeWidthPx,
+                cap = StrokeCap.Round,
+            )
+            if (fraction > 0f) {
+                drawLine(
+                    color = thumbColor,
+                    start = Offset(centerX, trackBottom),
+                    end = Offset(centerX, thumbY),
+                    strokeWidth = trackStrokeWidthPx,
+                    cap = StrokeCap.Round,
+                )
+            }
+            drawCircle(color = thumbColor, radius = thumbRadiusPx, center = Offset(centerX, thumbY))
+            drawCircle(color = colors.bgTop, radius = thumbRadiusPx * 0.4f, center = Offset(centerX, thumbY))
+        }
+    }
 }
 
 /**
@@ -631,8 +679,16 @@ private fun LockOverlay(onUnlock: () -> Unit) {
                     .clip(RoundedCornerShape(26.dp))
                     .background(colors.surfaceAlt)
                     .border(1.dp, colors.borderFaint, RoundedCornerShape(26.dp))
-                    .onGloballyPositioned { coordinates -> trackWidthPx = coordinates.size.width.toFloat() }
-                    .padding(4.dp),
+                    // Must come AFTER padding: onGloballyPositioned reports
+                    // this node's own size at this point in the chain, and
+                    // padding was shrinking the actual usable track by 4dp
+                    // on each side. Measuring before the padding (as this
+                    // used to) meant the drag bound was calculated for a
+                    // track 8dp wider than what the thumb could actually
+                    // move within — so on a full drag the thumb visibly
+                    // overshot past the track's right edge.
+                    .padding(4.dp)
+                    .onGloballyPositioned { coordinates -> trackWidthPx = coordinates.size.width.toFloat() },
             ) {
                 Box(
                     modifier = Modifier
