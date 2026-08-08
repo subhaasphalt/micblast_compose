@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
@@ -66,6 +68,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -84,20 +87,19 @@ import com.example.micblast.ui.theme.microBlastColors
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-private data class VoiceModeUi(val id: String, val label: String, val color: Color)
+private data class VoiceModeUi(
+    val id: String,
+    val label: String,
+    val color: Color,
+    val icon: ImageVector
+)
 
-/**
- * Stateless top-level screen: every value comes in as a parameter and every
- * user action goes out through a callback. MainActivity owns the actual
- * state (and the service calls that follow from it) — this file is purely
- * layout and look, which is the point of the Compose/theming split.
- */
 @Composable
 fun MainScreen(
     isRunning: Boolean,
     currentMode: String,
-    gainProgress: Int, // 0-100, maps to 1.0x-2.0x
-    intensityProgress: Int, // 0-100
+    gainProgress: Int,
+    intensityProgress: Int,
     audioSetupIndex: Int,
     audioSetupLabels: List<String>,
     isLocked: Boolean,
@@ -111,47 +113,62 @@ fun MainScreen(
     onUnlock: () -> Unit,
     onMenuClick: () -> Unit,
 ) {
-    val colors = MaterialTheme.microBlastColors
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(colors.bgTop, colors.bgBottom))),
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF0B0F1A),
+                        Color(0xFF12101F),
+                        Color(0xFF0D0B14)
+                    )
+                )
+            )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             TopBar(onMenuClick = onMenuClick, onLockClick = onLockClick)
 
+            Spacer(modifier = Modifier.height(28.dp))
+
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 28.dp),
-                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
             ) {
-                PrimaryActionButton(isRunning = isRunning, onPlayClick = onPlayClick, onStopClick = onStopClick)
+                PrimaryActionButton(
+                    isRunning = isRunning,
+                    onPlayClick = onPlayClick,
+                    onStopClick = onStopClick
+                )
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
 
             AudioSetupDropdown(
                 selectedIndex = audioSetupIndex,
                 labels = audioSetupLabels,
-                onSelect = onAudioSetupSelect,
+                onSelect = onAudioSetupSelect
             )
 
-            VSpace(22.dp)
+            Spacer(modifier = Modifier.height(24.dp))
 
-            LoudnessSection(progress = gainProgress, onProgressChange = onGainChange)
+            LoudnessSection(
+                progress = gainProgress,
+                onProgressChange = onGainChange
+            )
 
-            VSpace(22.dp)
+            Spacer(modifier = Modifier.height(24.dp))
 
             ModeAndIntensityGroup(
                 currentMode = currentMode,
                 onModeSelect = onModeSelect,
                 intensityProgress = intensityProgress,
                 intensityEnabled = currentMode != AudioLoopbackService.MODE_NORMAL,
-                onIntensityChange = onIntensityChange,
+                onIntensityChange = onIntensityChange
             )
         }
 
@@ -162,82 +179,82 @@ fun MainScreen(
 }
 
 @Composable
-private fun VSpace(height: Dp) {
-    Box(modifier = Modifier.height(height))
-}
-
-@Composable
 private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
     val colors = MaterialTheme.microBlastColors
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(
             onClick = onMenuClick,
             modifier = Modifier
-                .size(40.dp)
-                .border(1.dp, colors.borderFaint, RoundedCornerShape(10.dp)),
+                .size(42.dp)
+                .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.6f), RoundedCornerShape(12.dp))
         ) {
-            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.menu_button_cd), tint = colors.accentCyan)
+            Icon(
+                imageVector = Icons.Filled.Menu,
+                contentDescription = stringResource(R.string.menu_button_cd),
+                tint = Color(0xFF00E5FF)
+            )
         }
 
         Text(
             text = stringResource(R.string.app_title),
-            color = colors.textPrimary,
+            color = Color.White,
             fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
+            fontSize = 17.sp,
             textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f)
         )
 
         IconButton(
             onClick = onLockClick,
             modifier = Modifier
                 .size(44.dp)
-                .border(1.dp, colors.accentMagenta, CircleShape),
+                .border(1.5.dp, Color(0xFFFF2D95), CircleShape)
         ) {
-            Icon(Icons.Filled.Lock, contentDescription = stringResource(R.string.lock_button_cd), tint = colors.accentMagenta)
+            Icon(
+                imageVector = Icons.Filled.Lock,
+                contentDescription = stringResource(R.string.lock_button_cd),
+                tint = Color(0xFFFF2D95)
+            )
         }
     }
 }
 
 @Composable
-private fun PrimaryActionButton(isRunning: Boolean, onPlayClick: () -> Unit, onStopClick: () -> Unit) {
-    val colors = MaterialTheme.microBlastColors
-    // Play and Stop swap in the same spot rather than sitting side by side —
-    // the Compose equivalent of the old cross-fade + scale ViewPropertyAnimator
-    // pair in MainActivity's animatePrimaryAction().
+private fun PrimaryActionButton(
+    isRunning: Boolean,
+    onPlayClick: () -> Unit,
+    onStopClick: () -> Unit
+) {
     AnimatedContent(
         targetState = isRunning,
         transitionSpec = {
-            scaleIn(tween(260), initialScale = 0.6f) togetherWith scaleOut(tween(200), targetScale = 0.6f)
+            scaleIn(tween(260), initialScale = 0.7f) togetherWith
+                    scaleOut(tween(200), targetScale = 0.7f)
         },
-        // AnimatedContent defaults to top-start alignment. The play (96dp)
-        // and stop (84dp) circles are different sizes, so without an
-        // explicit center they don't share a center point — during the
-        // cross-fade (and even at rest, since both frames briefly overlap)
-        // that showed up as a sliver of the outgoing color peeking out past
-        // the incoming circle's edge instead of a clean concentric morph.
         contentAlignment = Alignment.Center,
-        label = "playStopMorph",
+        label = "playStopMorph"
     ) { running ->
-        val diameter = if (running) 84.dp else 96.dp
-        val tint = if (running) colors.accentMagenta else colors.accentCyan
+        val diameter = if (running) 86.dp else 96.dp
+        val accent = if (running) Color(0xFFFF2D95) else Color(0xFF00E5FF)
+
         Box(
             modifier = Modifier
                 .size(diameter)
                 .clip(CircleShape)
-                .background(colors.surfaceAlt)
-                .border(2.dp, tint, CircleShape),
-            contentAlignment = Alignment.Center,
+                .background(Color(0xFF16131F))
+                .border(2.5.dp, accent, CircleShape),
+            contentAlignment = Alignment.Center
         ) {
             IconButton(onClick = if (running) onStopClick else onPlayClick) {
                 Icon(
                     imageVector = if (running) Icons.Filled.Stop else Icons.Filled.PlayArrow,
                     contentDescription = null,
-                    tint = tint,
-                    modifier = Modifier.size(36.dp),
+                    tint = accent,
+                    modifier = Modifier.size(38.dp)
                 )
             }
         }
@@ -245,19 +262,23 @@ private fun PrimaryActionButton(isRunning: Boolean, onPlayClick: () -> Unit, onS
 }
 
 @Composable
-private fun AudioSetupDropdown(selectedIndex: Int, labels: List<String>, onSelect: (Int) -> Unit) {
-    val colors = MaterialTheme.microBlastColors
+private fun AudioSetupDropdown(
+    selectedIndex: Int,
+    labels: List<String>,
+    onSelect: (Int) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = labels.getOrElse(selectedIndex) { labels.firstOrNull().orEmpty() }
 
     Column {
         Text(
             text = stringResource(R.string.audio_setup_label),
-            color = colors.textPrimary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
-            modifier = Modifier.padding(bottom = 6.dp),
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
         )
+
         Box(modifier = Modifier.fillMaxWidth()) {
             TextField(
                 value = selectedLabel,
@@ -267,37 +288,40 @@ private fun AudioSetupDropdown(selectedIndex: Int, labels: List<String>, onSelec
                     Icon(
                         imageVector = if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
                         contentDescription = null,
-                        tint = colors.textSecondary,
+                        tint = Color(0xFFAAAAAA)
                     )
                 },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = colors.surface,
-                    unfocusedContainerColor = colors.surface,
-                    focusedTextColor = colors.textSecondary,
-                    unfocusedTextColor = colors.textSecondary,
-                    focusedIndicatorColor = colors.borderFaint,
-                    unfocusedIndicatorColor = colors.borderFaint,
+                    focusedContainerColor = Color(0xFF1A1625),
+                    unfocusedContainerColor = Color(0xFF1A1625),
+                    focusedTextColor = Color(0xFFDDDDDD),
+                    unfocusedTextColor = Color(0xFFDDDDDD),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent
                 ),
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth()
             )
-            // Transparent overlay so taps toggle the menu even though the field itself is read-only.
+
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .clickable { expanded = !expanded },
+                    .clickable { expanded = !expanded }
             )
+
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 labels.forEachIndexed { index, label ->
                     DropdownMenuItem(
-                        text = { Text(label, color = colors.textPrimary) },
+                        text = { Text(label, color = Color.White) },
                         onClick = {
                             expanded = false
                             onSelect(index)
-                        },
+                        }
                     )
                 }
             }
@@ -306,74 +330,97 @@ private fun AudioSetupDropdown(selectedIndex: Int, labels: List<String>, onSelec
 }
 
 @Composable
-private fun LoudnessSection(progress: Int, onProgressChange: (Int) -> Unit) {
-    val colors = MaterialTheme.microBlastColors
+private fun LoudnessSection(
+    progress: Int,
+    onProgressChange: (Int) -> Unit
+) {
     var showTooltip by remember { mutableStateOf(false) }
     val gain = 1.0f + (progress / 100f)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = stringResource(R.string.loudness_label),
-            color = colors.textPrimary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp
         )
+
         Box {
-            IconButton(onClick = { showTooltip = true }, modifier = Modifier.size(24.dp)) {
+            IconButton(
+                onClick = { showTooltip = true },
+                modifier = Modifier.size(28.dp)
+            ) {
                 Icon(
-                    Icons.Filled.Info,
+                    imageVector = Icons.Filled.Info,
                     contentDescription = stringResource(R.string.loudness_info_cd),
-                    tint = colors.accentCyan,
-                    modifier = Modifier.size(16.dp),
+                    tint = Color(0xFF00E5FF),
+                    modifier = Modifier.size(16.dp)
                 )
             }
+
             if (showTooltip) {
                 LaunchedEffect(Unit) {
-                    delay(4000)
+                    delay(3500)
                     showTooltip = false
                 }
                 Popup(
                     alignment = Alignment.TopStart,
-                    offset = IntOffset(0, -140),
+                    offset = IntOffset(0, -130),
                     properties = PopupProperties(focusable = false),
-                    onDismissRequest = { showTooltip = false },
+                    onDismissRequest = { showTooltip = false }
                 ) {
                     Box(
                         modifier = Modifier
-                            .width(230.dp)
-                            .background(colors.surfaceAlt, RoundedCornerShape(10.dp))
-                            .border(1.dp, colors.borderFaint, RoundedCornerShape(10.dp))
-                            .padding(12.dp),
+                            .width(220.dp)
+                            .background(Color(0xFF1E1A2A), RoundedCornerShape(12.dp))
+                            .border(1.dp, Color(0xFF33304A), RoundedCornerShape(12.dp))
+                            .padding(12.dp)
                     ) {
-                        Text(text = stringResource(R.string.loudness_tooltip), color = colors.textPrimary, fontSize = 12.sp)
+                        Text(
+                            text = stringResource(R.string.loudness_tooltip),
+                            color = Color(0xFFEEEEEE),
+                            fontSize = 12.sp
+                        )
                     }
                 }
             }
         }
-        Box(modifier = Modifier.weight(1f))
-        Text(text = "%.1f×".format(gain), color = colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Text(
+            text = "%.1f×".format(gain),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp
+        )
     }
 
-    NeonSlider(progress = progress, onProgressChange = onProgressChange, enabled = true)
+    Spacer(modifier = Modifier.height(6.dp))
+
+    NeonSlider(
+        progress = progress,
+        onProgressChange = onProgressChange,
+        enabled = true
+    )
 
     Row(modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.loudness_min), color = colors.textSecondary, fontSize = 11.sp, modifier = Modifier.weight(1f))
         Text(
-            stringResource(R.string.loudness_max),
-            color = colors.textSecondary,
+            text = stringResource(R.string.loudness_min),
+            color = Color(0xFF888888),
+            fontSize = 11.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = stringResource(R.string.loudness_max),
+            color = Color(0xFF888888),
             fontSize = 11.sp,
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f)
         )
     }
 }
 
-/**
- * Voice modes and their intensity live in one card so both controls sit
- * under the same thumb: the 2x2 mode grid on the left, a compact vertical
- * intensity slider on the right — reachable without shifting grip when
- * holding the phone one-handed.
- */
 @Composable
 private fun ModeAndIntensityGroup(
     currentMode: String,
@@ -382,30 +429,28 @@ private fun ModeAndIntensityGroup(
     intensityEnabled: Boolean,
     onIntensityChange: (Int) -> Unit,
 ) {
-    val colors = MaterialTheme.microBlastColors
     val modes = listOf(
-        VoiceModeUi(AudioLoopbackService.MODE_NORMAL, stringResource(R.string.mode_normal), colors.accentCyan),
-        VoiceModeUi(AudioLoopbackService.MODE_CHIPMUNK, stringResource(R.string.mode_chipmunk), colors.accentMagenta),
-        VoiceModeUi(AudioLoopbackService.MODE_DEEP, stringResource(R.string.mode_deep), colors.accentGreen),
-        VoiceModeUi(AudioLoopbackService.MODE_ROBOT, stringResource(R.string.mode_robot), colors.accentPurple),
+        VoiceModeUi(AudioLoopbackService.MODE_NORMAL, "Normal", Color(0xFF00E5FF), Icons.Filled.Mic),
+        VoiceModeUi(AudioLoopbackService.MODE_CHIPMUNK, "Chipmunk", Color(0xFFFF2D95), Icons.Filled.Mic),
+        VoiceModeUi(AudioLoopbackService.MODE_DEEP, "Monster", Color(0xFF39FF14), Icons.Filled.Mic),
+        VoiceModeUi(AudioLoopbackService.MODE_ROBOT, "Robot", Color(0xFFBF5AF2), Icons.Filled.Mic)
     )
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceAlt),
-        border = BorderStroke(1.dp, colors.borderFaint),
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF16131F)),
+        border = BorderStroke(1.dp, Color(0xFF2A2438)),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .padding(14.dp)
                 .height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 modes.chunked(2).forEach { rowModes ->
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -414,110 +459,122 @@ private fun ModeAndIntensityGroup(
                                 mode = mode,
                                 selected = mode.id == currentMode,
                                 onClick = { onModeSelect(mode.id) },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
                 }
             }
 
-            // Thin separator so the intensity control reads as its own
-            // region within the shared card, rather than crowding straight
-            // into the grid.
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(1.dp)
-                    .background(colors.borderFaint),
-            )
-
             IntensityColumn(
                 progress = intensityProgress,
                 enabled = intensityEnabled,
                 onProgressChange = onIntensityChange,
-                modifier = Modifier.fillMaxHeight(),
+                modifier = Modifier.fillMaxHeight()
             )
         }
     }
 }
 
 @Composable
-private fun ModeButton(mode: VoiceModeUi, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val colors = MaterialTheme.microBlastColors
-    val borderColor = if (selected) mode.color else colors.borderFaint
+private fun ModeButton(
+    mode: VoiceModeUi,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val background = if (selected) mode.color.copy(alpha = 0.15f) else Color(0xFF1C1826)
+    val borderColor = if (selected) mode.color else Color(0xFF2E2A3A)
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) mode.color.copy(alpha = 0.12f) else Color.Transparent)
-            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(background)
+            .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onClick,
+                onClick = onClick
             )
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center,
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(text = mode.label, color = mode.color, fontSize = 13.sp)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = mode.icon,
+                contentDescription = null,
+                tint = mode.color,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                text = mode.label,
+                color = mode.color,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
-/**
- * Compact vertical companion to the mode grid: "Extreme" sits at the top,
- * "Subtle" at the bottom, and the slider is a small hand-drawn control
- * rather than a stock full-width Slider rotated on its side — that rotated
- * approach kept its default (much larger) thumb size, which overflowed
- * this narrow column and clipped the labels next to it.
- */
 @Composable
 private fun IntensityColumn(
     progress: Int,
     enabled: Boolean,
     onProgressChange: (Int) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
-    val colors = MaterialTheme.microBlastColors
-    val sectionAlpha = if (enabled) 1f else 0.4f
+    val alpha = if (enabled) 1f else 0.38f
 
     Column(
         modifier = modifier
-            .width(64.dp)
-            .alpha(sectionAlpha),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .width(62.dp)
+            .alpha(alpha),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = stringResource(R.string.intensity_label),
-            color = colors.textPrimary,
-            fontWeight = FontWeight.Bold,
+            text = "Intensity",
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 11.sp,
-            lineHeight = 13.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 10.dp),
+            textAlign = TextAlign.Center
         )
-        Text(stringResource(R.string.intensity_max), color = colors.textSecondary, fontSize = 10.sp)
-        VSpace(6.dp)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Extreme",
+            color = Color(0xFFAAAAAA),
+            fontSize = 10.sp
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
         VerticalNeonSlider(
             progress = progress,
             onProgressChange = onProgressChange,
             enabled = enabled,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f)
         )
-        VSpace(6.dp)
-        Text(stringResource(R.string.intensity_min), color = colors.textSecondary, fontSize = 10.sp)
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = "Subtle",
+            color = Color(0xFFAAAAAA),
+            fontSize = 10.sp
+        )
     }
 }
 
-/**
- * A slider whose track and thumb blend from cyan to magenta along its
- * length — the Compose equivalent of the old ColorUtils.blendARGB thumb
- * tinting in MainActivity's updateThumbTint().
- */
 @Composable
-private fun NeonSlider(progress: Int, onProgressChange: (Int) -> Unit, enabled: Boolean) {
-    val colors = MaterialTheme.microBlastColors
+private fun NeonSlider(
+    progress: Int,
+    onProgressChange: (Int) -> Unit,
+    enabled: Boolean
+) {
     val fraction = (progress / 100f).coerceIn(0f, 1f)
-    val thumbColor = lerp(colors.accentCyan, colors.accentMagenta, fraction)
+    val thumbColor = lerp(Color(0xFF00E5FF), Color(0xFFFF2D95), fraction)
 
     Slider(
         value = progress.toFloat(),
@@ -527,47 +584,38 @@ private fun NeonSlider(progress: Int, onProgressChange: (Int) -> Unit, enabled: 
         colors = SliderDefaults.colors(
             thumbColor = thumbColor,
             activeTrackColor = thumbColor,
-            inactiveTrackColor = colors.surfaceAlt,
+            inactiveTrackColor = Color(0xFF2A2438),
             disabledThumbColor = thumbColor,
             disabledActiveTrackColor = thumbColor,
-            disabledInactiveTrackColor = colors.surfaceAlt,
-        ),
+            disabledInactiveTrackColor = Color(0xFF2A2438)
+        )
     )
 }
 
-/**
- * A small hand-drawn vertical slider — a thin track plus a round thumb,
- * matching the app's neon style directly instead of rotating a full-size
- * Material Slider (whose default thumb was too large for this narrow
- * column and overflowed into the labels beside it). Dragging or tapping
- * anywhere in the column moves the thumb; up increases the value.
- */
 @Composable
 private fun VerticalNeonSlider(
     progress: Int,
     onProgressChange: (Int) -> Unit,
     enabled: Boolean,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
-    val colors = MaterialTheme.microBlastColors
     val fraction = (progress / 100f).coerceIn(0f, 1f)
-    val thumbColor = lerp(colors.accentCyan, colors.accentMagenta, fraction)
-    val trackColor = colors.surfaceAlt
+    val thumbColor = lerp(Color(0xFF00E5FF), Color(0xFFFF2D95), fraction)
     val density = LocalDensity.current
-    val thumbRadiusPx = with(density) { 8.dp.toPx() }
-    val trackStrokeWidthPx = with(density) { 4.dp.toPx() }
+    val thumbRadiusPx = with(density) { 9.dp.toPx() }
+    val trackStroke = with(density) { 5.dp.toPx() }
     var heightPx by remember { mutableFloatStateOf(1f) }
 
     fun updateFromY(y: Float) {
-        val usableHeight = (heightPx - 2 * thumbRadiusPx).coerceAtLeast(1f)
-        val clampedY = (y - thumbRadiusPx).coerceIn(0f, usableHeight)
-        val newFraction = 1f - (clampedY / usableHeight)
+        val usable = (heightPx - 2 * thumbRadiusPx).coerceAtLeast(1f)
+        val clamped = (y - thumbRadiusPx).coerceIn(0f, usable)
+        val newFraction = 1f - (clamped / usable)
         onProgressChange((newFraction * 100f).roundToInt().coerceIn(0, 100))
     }
 
     Box(
         modifier = modifier
-            .width(28.dp)
+            .width(30.dp)
             .fillMaxHeight()
             .onGloballyPositioned { heightPx = it.size.height.toFloat() }
             .pointerInput(enabled) {
@@ -581,7 +629,7 @@ private fun VerticalNeonSlider(
                     updateFromY(change.position.y)
                 }
             },
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val usableHeight = (size.height - 2 * thumbRadiusPx).coerceAtLeast(1f)
@@ -590,105 +638,97 @@ private fun VerticalNeonSlider(
             val trackBottom = size.height - thumbRadiusPx
             val thumbY = trackBottom - usableHeight * fraction
 
+            // inactive track
             drawLine(
-                color = trackColor,
+                color = Color(0xFF2A2438),
                 start = Offset(centerX, trackTop),
                 end = Offset(centerX, trackBottom),
-                strokeWidth = trackStrokeWidthPx,
-                cap = StrokeCap.Round,
+                strokeWidth = trackStroke,
+                cap = StrokeCap.Round
             )
+
+            // active track
             if (fraction > 0f) {
                 drawLine(
                     color = thumbColor,
                     start = Offset(centerX, trackBottom),
                     end = Offset(centerX, thumbY),
-                    strokeWidth = trackStrokeWidthPx,
-                    cap = StrokeCap.Round,
+                    strokeWidth = trackStroke,
+                    cap = StrokeCap.Round
                 )
             }
-            drawCircle(color = thumbColor, radius = thumbRadiusPx, center = Offset(centerX, thumbY))
-            drawCircle(color = colors.bgTop, radius = thumbRadiusPx * 0.4f, center = Offset(centerX, thumbY))
+
+            // thumb
+            drawCircle(
+                color = thumbColor,
+                radius = thumbRadiusPx,
+                center = Offset(centerX, thumbY)
+            )
+            drawCircle(
+                color = Color(0xFF0B0F1A),
+                radius = thumbRadiusPx * 0.38f,
+                center = Offset(centerX, thumbY)
+            )
         }
     }
 }
 
-/**
- * Full-screen slide-to-unlock. Matches the old behavior of forwarding a
- * touch from anywhere on the overlay onto the lock bar: the drag gesture is
- * attached to the whole Box, not just the thin track, and only commits
- * (calls onUnlock) past 95% of the track width — otherwise it springs back.
- */
 @Composable
 private fun LockOverlay(onUnlock: () -> Unit) {
-    val colors = MaterialTheme.microBlastColors
     val density = LocalDensity.current
     val thumbSizePx = with(density) { 44.dp.toPx() }
     var trackWidthPx by remember { mutableFloatStateOf(1f) }
     var dragPx by remember { mutableFloatStateOf(0f) }
-    val maxDragPx = (trackWidthPx - thumbSizePx).coerceAtLeast(1f)
-    val fraction = (dragPx / maxDragPx).coerceIn(0f, 1f)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.82f))
             .pointerInput(Unit) {
-                // pointerInput(Unit) builds this whole gesture-callback
-                // block exactly once and never rebuilds it on recomposition
-                // (its key never changes) — so any *plain* local value
-                // captured here (like the outer `maxDragPx`/`fraction` vals)
-                // stays frozen forever at whatever it was during that first
-                // build, which happens before layout has measured the
-                // track (trackWidthPx still at its 1f default). That
-                // freeze is the actual cause of the old bug: the drag still
-                // *rendered* correctly (the Box below reads live state
-                // directly), but the release check compared against a
-                // bound computed from an unmeasured track, so it could
-                // never legitimately reach 0.95 and onUnlock() never fired.
-                // trackWidthPx/dragPx themselves are `remember`ed state, so
-                // reading THEM (not a derived val) inside this closure is
-                // always live — recomputing the bound from them inline,
-                // every time, is what actually fixes it.
                 detectHorizontalDragGestures(
                     onDragStart = { dragPx = 0f },
                     onHorizontalDrag = { change, dragAmount ->
                         change.consume()
-                        val liveMaxDragPx = (trackWidthPx - thumbSizePx).coerceAtLeast(1f)
-                        dragPx = (dragPx + dragAmount).coerceIn(0f, liveMaxDragPx)
+                        val liveMax = (trackWidthPx - thumbSizePx).coerceAtLeast(1f)
+                        dragPx = (dragPx + dragAmount).coerceIn(0f, liveMax)
                     },
                     onDragEnd = {
-                        val liveMaxDragPx = (trackWidthPx - thumbSizePx).coerceAtLeast(1f)
-                        val releaseFraction = (dragPx / liveMaxDragPx).coerceIn(0f, 1f)
-                        if (releaseFraction >= 0.95f) onUnlock()
+                        val liveMax = (trackWidthPx - thumbSizePx).coerceAtLeast(1f)
+                        if ((dragPx / liveMax) >= 0.95f) onUnlock()
                         dragPx = 0f
                     },
-                    onDragCancel = { dragPx = 0f },
+                    onDragCancel = { dragPx = 0f }
                 )
             },
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Filled.LockOpen, contentDescription = null, tint = colors.accentMagenta, modifier = Modifier.size(40.dp))
-            VSpace(16.dp)
-            Text(text = stringResource(R.string.slide_to_unlock), color = colors.textPrimary, fontSize = 14.sp)
-            VSpace(28.dp)
+            Icon(
+                imageVector = Icons.Filled.LockOpen,
+                contentDescription = null,
+                tint = Color(0xFFFF2D95),
+                modifier = Modifier.size(42.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.slide_to_unlock),
+                color = Color.White,
+                fontSize = 15.sp
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
             Box(
                 modifier = Modifier
                     .width(260.dp)
                     .height(52.dp)
                     .clip(RoundedCornerShape(26.dp))
-                    .background(colors.surfaceAlt)
-                    .border(1.dp, colors.borderFaint, RoundedCornerShape(26.dp))
-                    // Must come AFTER padding: onGloballyPositioned reports
-                    // this node's own size at this point in the chain, and
-                    // padding was shrinking the actual usable track by 4dp
-                    // on each side. Measuring before the padding (as this
-                    // used to) meant the drag bound was calculated for a
-                    // track 8dp wider than what the thumb could actually
-                    // move within — so on a full drag the thumb visibly
-                    // overshot past the track's right edge.
+                    .background(Color(0xFF1A1625))
+                    .border(1.dp, Color(0xFF33304A), RoundedCornerShape(26.dp))
                     .padding(4.dp)
-                    .onGloballyPositioned { coordinates -> trackWidthPx = coordinates.size.width.toFloat() },
+                    .onGloballyPositioned { trackWidthPx = it.size.width.toFloat() }
             ) {
                 Box(
                     modifier = Modifier
@@ -696,20 +736,27 @@ private fun LockOverlay(onUnlock: () -> Unit) {
                         .clip(RoundedCornerShape(22.dp))
                         .background(
                             Brush.horizontalGradient(
-                                listOf(colors.accentCyan, colors.accentMagenta),
-                                endX = dragPx + thumbSizePx,
-                            ),
-                        ),
+                                colors = listOf(Color(0xFF00E5FF), Color(0xFFFF2D95)),
+                                endX = dragPx + thumbSizePx
+                            )
+                        )
                 )
+
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .offset { IntOffset(dragPx.roundToInt(), 0) }
                         .clip(CircleShape)
-                        .background(lerp(colors.accentCyan, colors.accentMagenta, fraction)),
-                    contentAlignment = Alignment.Center,
+                        .background(
+                            lerp(Color(0xFF00E5FF), Color(0xFFFF2D95), (dragPx / (trackWidthPx - thumbSizePx)).coerceIn(0f, 1f))
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = colors.bgTop)
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        tint = Color(0xFF0B0F1A)
+                    )
                 }
             }
         }
