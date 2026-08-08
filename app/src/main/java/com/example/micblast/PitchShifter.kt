@@ -33,7 +33,7 @@ class PitchShifter(sampleRateHz: Int) {
         }
 
         for (i in 0 until len) {
-            circBuf[writePtr % bufSize] = input[i].toFloat()
+            circBuf[writePtr] = input[i].toFloat()
 
             val env1 = triangleWindow(phase1)
             val s1 = interpolate(readPos1)
@@ -57,7 +57,12 @@ class PitchShifter(sampleRateHz: Int) {
                 phase2 = 0
                 readPos2 = (writePtr - grainSize).toFloat()
             }
+            // Wrap writePtr manually instead of letting it grow forever —
+            // at 44.1kHz an unbounded Int would overflow (and go negative)
+            // after ~13.5 hours of continuous use in a pitch-shifted mode,
+            // which would then index circBuf with a negative value and crash.
             writePtr++
+            if (writePtr >= bufSize) writePtr -= bufSize
         }
     }
 

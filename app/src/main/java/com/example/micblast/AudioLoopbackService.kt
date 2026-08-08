@@ -24,6 +24,7 @@ import android.os.Looper
 import android.os.Process
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -57,6 +58,13 @@ class AudioLoopbackService : Service() {
 
     @Volatile
     private var running = false
+
+    // True from the moment startLoopback() is called until beginAudioPipeline()
+    // finishes (or aborts). Covers the async Bluetooth SCO connect window,
+    // where `running` is still false but a second ACTION_START would otherwise
+    // re-register scoReceiver and crash with "Receiver already registered".
+    @Volatile
+    private var starting = false
 
     private var scoReceiverRegistered = false
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -153,7 +161,8 @@ class AudioLoopbackService : Service() {
     }
 
     private fun startLoopback() {
-        if (running) return
+        if (running || starting) return
+        starting = true
 
         val usesCommunicationRouting = audioSetup != SETUP_PHONE_MIC_TO_BT_SPEAKER
         val focusUsage = if (usesCommunicationRouting) {
@@ -190,6 +199,7 @@ class AudioLoopbackService : Service() {
 
         if (focusResult != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             Log.d(TAG, "Audio focus not granted, not starting")
+            starting = false
             stopSelf()
             broadcastState(false)
             return
@@ -203,7 +213,9 @@ class AudioLoopbackService : Service() {
             // Android to open that link first, then wait for it to
             // actually connect before touching AudioRecord.
             val filter = IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)
-            registerReceiver(scoReceiver, filter)
+            ContextCompat.registerReceiver(
+                this, scoReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED
+            )
             scoReceiverRegistered = true
 
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
@@ -222,7 +234,10 @@ class AudioLoopbackService : Service() {
     }
 
     private fun beginAudioPipeline() {
-        if (running) return
+        if (running) {
+            starting = false
+            return
+        }
 
         sampleRate = 44100
 
@@ -232,6 +247,15 @@ class AudioLoopbackService : Service() {
         val minPlayBuf = AudioTrack.getMinBufferSize(
             sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
+        // getMinBufferSize can return ERROR (-1) or ERROR_BAD_VALUE (-2) on
+        // devices/configs that don't support this format. Doubling a
+        // negative value stays negative and crashes the AudioRecord/
+        // AudioTrack constructors below, so bail out cleanly instead.
+        if (minRecBuf <= 0 || minPlayBuf <= 0) {
+            Log.e(TAG, "Unsupported audio config: minRecBuf=$minRecBuf minPlayBuf=$minPlayBuf")
+            abortStartup()
+            return
+        }
         val recBufSize = minRecBuf * 2
         val playBufSize = minPlayBuf * 2
 
@@ -250,13 +274,25 @@ class AudioLoopbackService : Service() {
         }
         Log.d(TAG, "audioSetup=$audioSetup, chosenSource=$chosenSource, mode=$currentMode")
 
-        audioRecord = AudioRecord(
-            chosenSource,
-            sampleRate,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            recBufSize
-        )
+        audioRecord = try {
+            AudioRecord(
+                chosenSource,
+                sampleRate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                recBufSize
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "AudioRecord construction failed", e)
+            null
+        }
+        if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+            Log.e(TAG, "AudioRecord failed to initialize (mic busy or unsupported config)")
+            audioRecord?.release()
+            audioRecord = null
+            abortStartup()
+            return
+        }
 
         val inputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
         inputDevices.forEach {
@@ -288,20 +324,34 @@ class AudioLoopbackService : Service() {
             AudioAttributes.CONTENT_TYPE_MUSIC
         }
 
-        audioTrack = AudioTrack(
-            AudioAttributes.Builder()
-                .setUsage(trackUsage)
-                .setContentType(trackContentType)
-                .build(),
-            AudioFormat.Builder()
-                .setSampleRate(sampleRate)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .build(),
-            playBufSize,
-            AudioTrack.MODE_STREAM,
-            AudioManager.AUDIO_SESSION_ID_GENERATE
-        )
+        audioTrack = try {
+            AudioTrack(
+                AudioAttributes.Builder()
+                    .setUsage(trackUsage)
+                    .setContentType(trackContentType)
+                    .build(),
+                AudioFormat.Builder()
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .build(),
+                playBufSize,
+                AudioTrack.MODE_STREAM,
+                AudioManager.AUDIO_SESSION_ID_GENERATE
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "AudioTrack construction failed", e)
+            null
+        }
+        if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
+            Log.e(TAG, "AudioTrack failed to initialize")
+            audioRecord?.release()
+            audioRecord = null
+            audioTrack?.release()
+            audioTrack = null
+            abortStartup()
+            return
+        }
         // Left at unity on purpose — real output level is the phone's own
         // hardware volume now; `gain` below adds loudness on top of that.
         audioTrack?.setVolume(1f)
@@ -326,9 +376,20 @@ class AudioLoopbackService : Service() {
         }
         ringModPhase = 0.0
 
-        audioRecord?.startRecording()
-        audioTrack?.play()
+        try {
+            audioRecord?.startRecording()
+            audioTrack?.play()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start recording/playback", e)
+            audioRecord?.release()
+            audioRecord = null
+            audioTrack?.release()
+            audioTrack = null
+            abortStartup()
+            return
+        }
         running = true
+        starting = false
 
         Log.d(
             TAG,
@@ -340,16 +401,47 @@ class AudioLoopbackService : Service() {
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
             val buffer = ShortArray(recBufSize / 2)
             val processed = ShortArray(recBufSize / 2)
-            while (running) {
-                val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
-                if (read > 0) {
-                    applyVoiceEffect(buffer, read, processed)
-                    applyGain(processed, read)
-                    audioTrack?.write(processed, 0, read)
+            try {
+                while (running) {
+                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
+                    if (read > 0) {
+                        applyVoiceEffect(buffer, read, processed)
+                        applyGain(processed, read)
+                        audioTrack?.write(processed, 0, read)
+                    }
                 }
+            } catch (e: Exception) {
+                // Something in the read/process/write path blew up mid-stream.
+                // Without this, the thread would just die silently — the
+                // notification would keep saying "live" and the UI would
+                // keep showing Stop even though no audio is moving anymore.
+                // Route the actual stop through the main thread so state
+                // (notification, focus, UI broadcast) stays consistent.
+                Log.e(TAG, "Audio loop crashed, stopping loopback", e)
+                mainHandler.post { stopLoopback() }
             }
         }
         loopThread?.start()
+    }
+
+    // Cleans up whatever was already set up (foreground notification, audio
+    // focus, SCO) when startup can't continue, so the service doesn't get
+    // stuck showing a "live" notification for a session that never started.
+    private fun abortStartup() {
+        starting = false
+        if (scoReceiverRegistered) {
+            unregisterReceiver(scoReceiver)
+            scoReceiverRegistered = false
+        }
+        if (audioManager.isBluetoothScoOn) {
+            audioManager.isBluetoothScoOn = false
+            audioManager.stopBluetoothSco()
+        }
+        resetAudioMode()
+        releaseAudioFocus()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+        broadcastState(false)
     }
 
     private fun applyVoiceEffect(input: ShortArray, len: Int, output: ShortArray) {
@@ -403,6 +495,7 @@ class AudioLoopbackService : Service() {
     }
 
     private fun stopLoopback() {
+        starting = false
         scoTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
         scoTimeoutRunnable = null
         if (scoReceiverRegistered) {
