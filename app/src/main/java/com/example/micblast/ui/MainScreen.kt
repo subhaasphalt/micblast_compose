@@ -47,8 +47,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -398,7 +396,7 @@ private fun LoudnessSection(
 
     Spacer(modifier = Modifier.height(6.dp))
 
-    NeonSlider(
+    HorizontalNeonSlider(
         progress = progress,
         onProgressChange = onProgressChange,
         enabled = true
@@ -533,16 +531,6 @@ private fun IntensityColumn(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Intensity",
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 11.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
             text = "Extreme",
             color = Color(0xFFAAAAAA),
             fontSize = 10.sp
@@ -568,28 +556,84 @@ private fun IntensityColumn(
 }
 
 @Composable
-private fun NeonSlider(
+private fun HorizontalNeonSlider(
     progress: Int,
     onProgressChange: (Int) -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
+    modifier: Modifier = Modifier
 ) {
     val fraction = (progress / 100f).coerceIn(0f, 1f)
     val thumbColor = lerp(Color(0xFF00E5FF), Color(0xFFFF2D95), fraction)
+    val density = LocalDensity.current
+    val thumbRadiusPx = with(density) { 9.dp.toPx() }
+    val trackStroke = with(density) { 5.dp.toPx() }
+    var widthPx by remember { mutableFloatStateOf(1f) }
 
-    Slider(
-        value = progress.toFloat(),
-        onValueChange = { onProgressChange(it.roundToInt()) },
-        valueRange = 0f..100f,
-        enabled = enabled,
-        colors = SliderDefaults.colors(
-            thumbColor = thumbColor,
-            activeTrackColor = thumbColor,
-            inactiveTrackColor = Color(0xFF2A2438),
-            disabledThumbColor = thumbColor,
-            disabledActiveTrackColor = thumbColor,
-            disabledInactiveTrackColor = Color(0xFF2A2438)
-        )
-    )
+    fun updateFromX(x: Float) {
+        val usable = (widthPx - 2 * thumbRadiusPx).coerceAtLeast(1f)
+        val clamped = (x - thumbRadiusPx).coerceIn(0f, usable)
+        val newFraction = clamped / usable
+        onProgressChange((newFraction * 100f).roundToInt().coerceIn(0, 100))
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(30.dp)
+            .onGloballyPositioned { widthPx = it.size.width.toFloat() }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectTapGestures { offset -> updateFromX(offset.x) }
+            }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectHorizontalDragGestures { change, _ ->
+                    change.consume()
+                    updateFromX(change.position.x)
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val usableWidth = (size.width - 2 * thumbRadiusPx).coerceAtLeast(1f)
+            val centerY = size.height / 2f
+            val trackStart = thumbRadiusPx
+            val trackEnd = size.width - thumbRadiusPx
+            val thumbX = trackStart + usableWidth * fraction
+
+            // inactive track
+            drawLine(
+                color = Color(0xFF2A2438),
+                start = Offset(trackStart, centerY),
+                end = Offset(trackEnd, centerY),
+                strokeWidth = trackStroke,
+                cap = StrokeCap.Round
+            )
+
+            // active track
+            if (fraction > 0f) {
+                drawLine(
+                    color = thumbColor,
+                    start = Offset(trackStart, centerY),
+                    end = Offset(thumbX, centerY),
+                    strokeWidth = trackStroke,
+                    cap = StrokeCap.Round
+                )
+            }
+
+            // thumb
+            drawCircle(
+                color = thumbColor,
+                radius = thumbRadiusPx,
+                center = Offset(thumbX, centerY)
+            )
+            drawCircle(
+                color = Color(0xFF0B0F1A),
+                radius = thumbRadiusPx * 0.38f,
+                center = Offset(thumbX, centerY)
+            )
+        }
+    }
 }
 
 @Composable
