@@ -2,23 +2,25 @@ package com.example.micblast.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * All the colors MainScreen actually reaches for. This is the seam for
- * Settings-driven theming later: build a different MicBlastColors instance
- * (or several presets) and pass it into MicBlastTheme — every composable
- * downstream reads through MaterialTheme.microBlastColors, so nothing in
- * MainScreen.kt needs to change when a theme picker is added.
+ * All the colors MainScreen actually reaches for. Two instances exist —
+ * NeonColors (dark) and LightColors — and MicBlastTheme picks between them
+ * based on the darkTheme flag. Every composable downstream reads through
+ * MaterialTheme.microBlastColors, so switching themes in Settings updates
+ * the whole screen automatically.
  */
 data class MicBlastColors(
     val bgTop: Color,
+    val bgMid: Color,
     val bgBottom: Color,
     val surface: Color,
-    val surfaceAlt: Color,
+    val surfaceChip: Color,
     val borderFaint: Color,
     val accentCyan: Color,
     val accentMagenta: Color,
@@ -26,13 +28,15 @@ data class MicBlastColors(
     val accentPurple: Color,
     val textPrimary: Color,
     val textSecondary: Color,
+    val textMuted: Color,
 )
 
 val NeonColors = MicBlastColors(
     bgTop = NeonPalette.BgTop,
+    bgMid = NeonPalette.BgMid,
     bgBottom = NeonPalette.BgBottom,
     surface = NeonPalette.Surface,
-    surfaceAlt = NeonPalette.SurfaceAlt,
+    surfaceChip = NeonPalette.SurfaceChip,
     borderFaint = NeonPalette.BorderFaint,
     accentCyan = NeonPalette.Cyan,
     accentMagenta = NeonPalette.Magenta,
@@ -40,6 +44,23 @@ val NeonColors = MicBlastColors(
     accentPurple = NeonPalette.Purple,
     textPrimary = NeonPalette.TextPrimary,
     textSecondary = NeonPalette.TextSecondary,
+    textMuted = NeonPalette.TextMuted,
+)
+
+val LightColors = MicBlastColors(
+    bgTop = LightPalette.BgTop,
+    bgMid = LightPalette.BgMid,
+    bgBottom = LightPalette.BgBottom,
+    surface = LightPalette.Surface,
+    surfaceChip = LightPalette.SurfaceChip,
+    borderFaint = LightPalette.BorderFaint,
+    accentCyan = LightPalette.Cyan,
+    accentMagenta = LightPalette.Magenta,
+    accentGreen = LightPalette.Green,
+    accentPurple = LightPalette.Purple,
+    textPrimary = LightPalette.TextPrimary,
+    textSecondary = LightPalette.TextSecondary,
+    textMuted = LightPalette.TextMuted,
 )
 
 private val LocalMicBlastColors = staticCompositionLocalOf { NeonColors }
@@ -54,19 +75,34 @@ val MaterialTheme.microBlastColors: MicBlastColors
 
 @Composable
 fun MicBlastTheme(
-    colors: MicBlastColors = NeonColors,
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val colors = if (darkTheme) NeonColors else LightColors
+
     CompositionLocalProvider(LocalMicBlastColors provides colors) {
-        MaterialTheme(
-            colorScheme = darkColorScheme(
+        val scheme = if (darkTheme) {
+            darkColorScheme(
                 primary = colors.accentCyan,
                 secondary = colors.accentMagenta,
                 background = colors.bgTop,
                 surface = colors.surface,
                 onBackground = colors.textPrimary,
                 onSurface = colors.textPrimary,
-            ),
+            )
+        } else {
+            lightColorScheme(
+                primary = colors.accentCyan,
+                secondary = colors.accentMagenta,
+                background = colors.bgTop,
+                surface = colors.surface,
+                onBackground = colors.textPrimary,
+                onSurface = colors.textPrimary,
+            )
+        }
+
+        MaterialTheme(
+            colorScheme = scheme,
             content = content
         )
     }

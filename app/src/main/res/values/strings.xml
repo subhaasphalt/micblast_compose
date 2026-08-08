@@ -8,6 +8,15 @@
     <string name="loudness_info_cd">Loudness Boost info</string>
     <string name="menu_button_cd">Open menu</string>
     <string name="settings_coming_soon">Settings menu coming soon</string>
+    <string name="back_button_cd">Back</string>
+    <string name="settings_title">Settings</string>
+    <string name="dark_mode_label">Dark Mode</string>
+    <string name="dark_mode_on_desc">Neon dark theme</string>
+    <string name="dark_mode_off_desc">Light theme</string>
+    <string name="exit_confirm_title">Exit MicBlast?</string>
+    <string name="exit_confirm_message">This will close the app. Any active loopback audio will stop.</string>
+    <string name="exit_confirm_yes">Exit</string>
+    <string name="exit_confirm_cancel">Cancel</string>
     <string name="mode_normal">Normal</string>
     <string name="mode_chipmunk">Chipmunk</string>
     <string name="mode_deep">Monster</string>

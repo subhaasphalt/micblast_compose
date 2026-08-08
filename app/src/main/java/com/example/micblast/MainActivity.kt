@@ -21,7 +21,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringArrayResource
 import androidx.core.content.ContextCompat
+import com.example.micblast.ui.ExitConfirmationDialog
 import com.example.micblast.ui.MainScreen
+import com.example.micblast.ui.SettingsScreen
 import com.example.micblast.ui.theme.MicBlastTheme
 
 class MainActivity : ComponentActivity() {
@@ -35,6 +37,13 @@ class MainActivity : ComponentActivity() {
     private var intensityProgress by mutableIntStateOf(50)
     private var audioSetupIndex by mutableIntStateOf(0)
     private var isLocked by mutableStateOf(false)
+    private var showSettings by mutableStateOf(false)
+    private var showExitConfirmation by mutableStateOf(false)
+    private var darkTheme by mutableStateOf(true)
+
+    private val settingsPrefs by lazy {
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
 
     // Audio setup order must match R.array.audio_setup_options.
     private val audioSetupValues = listOf(
@@ -67,39 +76,70 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupOrientationLock()
+        darkTheme = settingsPrefs.getBoolean(KEY_DARK_THEME, true)
 
         setContent {
-            MicBlastTheme {
+            MicBlastTheme(darkTheme = darkTheme) {
                 BackHandler(enabled = isLocked) {
                     // Locked — swallow back press instead of exiting/navigating,
                     // same as the old onBackPressed() override.
                 }
 
-                MainScreen(
-                    isRunning = isRunning,
-                    currentMode = currentMode,
-                    gainProgress = gainProgress,
-                    intensityProgress = intensityProgress,
-                    audioSetupIndex = audioSetupIndex,
-                    audioSetupLabels = stringArrayResource(R.array.audio_setup_options).toList(),
-                    isLocked = isLocked,
-                    onPlayClick = ::onPlayRequested,
-                    onStopClick = ::stopLoopback,
-                    onModeSelect = ::selectMode,
-                    onGainChange = ::onGainChanged,
-                    onIntensityChange = ::onIntensityChanged,
-                    onAudioSetupSelect = ::onAudioSetupSelected,
-                    onLockClick = { isLocked = true },
-                    onUnlock = { isLocked = false },
-                    onMenuClick = {
-                        // Settings screen (theme, haptics, RGB edge-lighting, etc.)
-                        // is a separate piece of work — stubbed so the button
-                        // isn't dead.
-                        Toast.makeText(this, R.string.settings_coming_soon, Toast.LENGTH_SHORT).show()
-                    },
-                )
+                BackHandler(enabled = showSettings) {
+                    showSettings = false
+                }
+
+                BackHandler(enabled = !isLocked && !showSettings) {
+                    // Instead of exiting immediately, ask for confirmation so a
+                    // stray/accidental back press doesn't silently kill the app
+                    // (and any active loopback audio) mid-session.
+                    showExitConfirmation = true
+                }
+
+                if (showSettings) {
+                    SettingsScreen(
+                        darkTheme = darkTheme,
+                        onDarkThemeChange = ::onDarkThemeChanged,
+                        onBack = { showSettings = false },
+                    )
+                } else {
+                    MainScreen(
+                        isRunning = isRunning,
+                        currentMode = currentMode,
+                        gainProgress = gainProgress,
+                        intensityProgress = intensityProgress,
+                        audioSetupIndex = audioSetupIndex,
+                        audioSetupLabels = stringArrayResource(R.array.audio_setup_options).toList(),
+                        isLocked = isLocked,
+                        onPlayClick = ::onPlayRequested,
+                        onStopClick = ::stopLoopback,
+                        onModeSelect = ::selectMode,
+                        onGainChange = ::onGainChanged,
+                        onIntensityChange = ::onIntensityChanged,
+                        onAudioSetupSelect = ::onAudioSetupSelected,
+                        onLockClick = { isLocked = true },
+                        onUnlock = { isLocked = false },
+                        onMenuClick = { showSettings = true },
+                    )
+                }
+
+                if (showExitConfirmation) {
+                    ExitConfirmationDialog(
+                        onConfirm = {
+                            if (isRunning) stopLoopback()
+                            showExitConfirmation = false
+                            finish()
+                        },
+                        onDismiss = { showExitConfirmation = false },
+                    )
+                }
             }
         }
+    }
+
+    private fun onDarkThemeChanged(enabled: Boolean) {
+        darkTheme = enabled
+        settingsPrefs.edit().putBoolean(KEY_DARK_THEME, enabled).apply()
     }
 
     private fun onPlayRequested() {
@@ -256,5 +296,10 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         orientationEventListener?.disable()
         super.onDestroy()
+    }
+
+    private companion object {
+        const val PREFS_NAME = "micblast_settings"
+        const val KEY_DARK_THEME = "dark_theme"
     }
 }

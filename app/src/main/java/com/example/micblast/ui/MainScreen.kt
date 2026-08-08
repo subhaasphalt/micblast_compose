@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -48,6 +49,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -111,15 +113,17 @@ fun MainScreen(
     onUnlock: () -> Unit,
     onMenuClick: () -> Unit,
 ) {
+    val colors = MaterialTheme.microBlastColors
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF0B0F1A),
-                        Color(0xFF12101F),
-                        Color(0xFF0D0B14)
+                        colors.bgTop,
+                        colors.bgMid,
+                        colors.bgBottom
                     )
                 )
             )
@@ -188,18 +192,18 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
             onClick = onMenuClick,
             modifier = Modifier
                 .size(42.dp)
-                .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .border(1.dp, colors.accentCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
         ) {
             Icon(
                 imageVector = Icons.Filled.Menu,
                 contentDescription = stringResource(R.string.menu_button_cd),
-                tint = Color(0xFF00E5FF)
+                tint = colors.accentCyan
             )
         }
 
         Text(
             text = stringResource(R.string.app_title),
-            color = Color.White,
+            color = colors.textPrimary,
             fontWeight = FontWeight.Bold,
             fontSize = 17.sp,
             textAlign = TextAlign.Center,
@@ -210,12 +214,12 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
             onClick = onLockClick,
             modifier = Modifier
                 .size(44.dp)
-                .border(1.5.dp, Color(0xFFFF2D95), CircleShape)
+                .border(1.5.dp, colors.accentMagenta, CircleShape)
         ) {
             Icon(
                 imageVector = Icons.Filled.Lock,
                 contentDescription = stringResource(R.string.lock_button_cd),
-                tint = Color(0xFFFF2D95)
+                tint = colors.accentMagenta
             )
         }
     }
@@ -236,14 +240,15 @@ private fun PrimaryActionButton(
         contentAlignment = Alignment.Center,
         label = "playStopMorph"
     ) { running ->
+        val colors = MaterialTheme.microBlastColors
         val diameter = if (running) 86.dp else 96.dp
-        val accent = if (running) Color(0xFFFF2D95) else Color(0xFF00E5FF)
+        val accent = if (running) colors.accentMagenta else colors.accentCyan
 
         Box(
             modifier = Modifier
                 .size(diameter)
                 .clip(CircleShape)
-                .background(Color(0xFF16131F))
+                .background(colors.surface)
                 .border(2.5.dp, accent, CircleShape),
             contentAlignment = Alignment.Center
         ) {
@@ -265,13 +270,14 @@ private fun AudioSetupDropdown(
     labels: List<String>,
     onSelect: (Int) -> Unit
 ) {
+    val colors = MaterialTheme.microBlastColors
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = labels.getOrElse(selectedIndex) { labels.firstOrNull().orEmpty() }
 
     Column {
         Text(
             text = stringResource(R.string.audio_setup_label),
-            color = Color.White,
+            color = colors.textPrimary,
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -286,14 +292,14 @@ private fun AudioSetupDropdown(
                     Icon(
                         imageVector = if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
                         contentDescription = null,
-                        tint = Color(0xFFAAAAAA)
+                        tint = colors.textSecondary
                     )
                 },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFF1A1625),
-                    unfocusedContainerColor = Color(0xFF1A1625),
-                    focusedTextColor = Color(0xFFDDDDDD),
-                    unfocusedTextColor = Color(0xFFDDDDDD),
+                    focusedContainerColor = colors.surface,
+                    unfocusedContainerColor = colors.surface,
+                    focusedTextColor = colors.textPrimary,
+                    unfocusedTextColor = colors.textPrimary,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent
@@ -315,7 +321,7 @@ private fun AudioSetupDropdown(
             ) {
                 labels.forEachIndexed { index, label ->
                     DropdownMenuItem(
-                        text = { Text(label, color = Color.White) },
+                        text = { Text(label, color = colors.textPrimary) },
                         onClick = {
                             expanded = false
                             onSelect(index)
@@ -332,13 +338,14 @@ private fun LoudnessSection(
     progress: Int,
     onProgressChange: (Int) -> Unit
 ) {
+    val colors = MaterialTheme.microBlastColors
     var showTooltip by remember { mutableStateOf(false) }
     val gain = 1.0f + (progress / 100f)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = stringResource(R.string.loudness_label),
-            color = Color.White,
+            color = colors.textPrimary,
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp
         )
@@ -351,7 +358,7 @@ private fun LoudnessSection(
                 Icon(
                     imageVector = Icons.Filled.Info,
                     contentDescription = stringResource(R.string.loudness_info_cd),
-                    tint = Color(0xFF00E5FF),
+                    tint = colors.accentCyan,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -370,13 +377,13 @@ private fun LoudnessSection(
                     Box(
                         modifier = Modifier
                             .width(220.dp)
-                            .background(Color(0xFF1E1A2A), RoundedCornerShape(12.dp))
-                            .border(1.dp, Color(0xFF33304A), RoundedCornerShape(12.dp))
+                            .background(colors.surface, RoundedCornerShape(12.dp))
+                            .border(1.dp, colors.borderFaint, RoundedCornerShape(12.dp))
                             .padding(12.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.loudness_tooltip),
-                            color = Color(0xFFEEEEEE),
+                            color = colors.textPrimary,
                             fontSize = 12.sp
                         )
                     }
@@ -388,7 +395,7 @@ private fun LoudnessSection(
 
         Text(
             text = "%.1f×".format(gain),
-            color = Color.White,
+            color = colors.textPrimary,
             fontWeight = FontWeight.Bold,
             fontSize = 14.sp
         )
@@ -405,13 +412,13 @@ private fun LoudnessSection(
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.loudness_min),
-            color = Color(0xFF888888),
+            color = colors.textMuted,
             fontSize = 11.sp,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = stringResource(R.string.loudness_max),
-            color = Color(0xFF888888),
+            color = colors.textMuted,
             fontSize = 11.sp,
             textAlign = TextAlign.End,
             modifier = Modifier.weight(1f)
@@ -427,16 +434,17 @@ private fun ModeAndIntensityGroup(
     intensityEnabled: Boolean,
     onIntensityChange: (Int) -> Unit,
 ) {
+    val colors = MaterialTheme.microBlastColors
     val modes = listOf(
-        VoiceModeUi(AudioLoopbackService.MODE_NORMAL, "Normal", Color(0xFF00E5FF), Icons.Filled.Mic),
-        VoiceModeUi(AudioLoopbackService.MODE_CHIPMUNK, "Chipmunk", Color(0xFFFF2D95), Icons.Filled.Mic),
-        VoiceModeUi(AudioLoopbackService.MODE_DEEP, "Monster", Color(0xFF39FF14), Icons.Filled.Mic),
-        VoiceModeUi(AudioLoopbackService.MODE_ROBOT, "Robot", Color(0xFFBF5AF2), Icons.Filled.Mic)
+        VoiceModeUi(AudioLoopbackService.MODE_NORMAL, "Normal", colors.accentCyan, Icons.Filled.Mic),
+        VoiceModeUi(AudioLoopbackService.MODE_CHIPMUNK, "Chipmunk", colors.accentMagenta, Icons.Filled.Mic),
+        VoiceModeUi(AudioLoopbackService.MODE_DEEP, "Monster", colors.accentGreen, Icons.Filled.Mic),
+        VoiceModeUi(AudioLoopbackService.MODE_ROBOT, "Robot", colors.accentPurple, Icons.Filled.Mic)
     )
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF16131F)),
-        border = BorderStroke(1.dp, Color(0xFF2A2438)),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = BorderStroke(1.dp, colors.borderFaint),
         shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -481,8 +489,9 @@ private fun ModeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val background = if (selected) mode.color.copy(alpha = 0.15f) else Color(0xFF1C1826)
-    val borderColor = if (selected) mode.color else Color(0xFF2E2A3A)
+    val colors = MaterialTheme.microBlastColors
+    val background = if (selected) mode.color.copy(alpha = 0.15f) else colors.surfaceChip
+    val borderColor = if (selected) mode.color else colors.borderFaint
 
     Box(
         modifier = modifier
@@ -522,6 +531,7 @@ private fun IntensityColumn(
     onProgressChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.microBlastColors
     val alpha = if (enabled) 1f else 0.38f
 
     Column(
@@ -532,7 +542,7 @@ private fun IntensityColumn(
     ) {
         Text(
             text = "Extreme",
-            color = Color(0xFFAAAAAA),
+            color = colors.textSecondary,
             fontSize = 10.sp
         )
 
@@ -549,7 +559,7 @@ private fun IntensityColumn(
 
         Text(
             text = "Subtle",
-            color = Color(0xFFAAAAAA),
+            color = colors.textSecondary,
             fontSize = 10.sp
         )
     }
@@ -562,8 +572,9 @@ private fun HorizontalNeonSlider(
     enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.microBlastColors
     val fraction = (progress / 100f).coerceIn(0f, 1f)
-    val thumbColor = lerp(Color(0xFF00E5FF), Color(0xFFFF2D95), fraction)
+    val thumbColor = lerp(colors.accentCyan, colors.accentMagenta, fraction)
     val density = LocalDensity.current
     val thumbRadiusPx = with(density) { 9.dp.toPx() }
     val trackStroke = with(density) { 5.dp.toPx() }
@@ -603,7 +614,7 @@ private fun HorizontalNeonSlider(
 
             // inactive track
             drawLine(
-                color = Color(0xFF2A2438),
+                color = colors.borderFaint,
                 start = Offset(trackStart, centerY),
                 end = Offset(trackEnd, centerY),
                 strokeWidth = trackStroke,
@@ -628,7 +639,7 @@ private fun HorizontalNeonSlider(
                 center = Offset(thumbX, centerY)
             )
             drawCircle(
-                color = Color(0xFF0B0F1A),
+                color = colors.bgTop,
                 radius = thumbRadiusPx * 0.38f,
                 center = Offset(thumbX, centerY)
             )
@@ -643,8 +654,9 @@ private fun VerticalNeonSlider(
     enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.microBlastColors
     val fraction = (progress / 100f).coerceIn(0f, 1f)
-    val thumbColor = lerp(Color(0xFF00E5FF), Color(0xFFFF2D95), fraction)
+    val thumbColor = lerp(colors.accentCyan, colors.accentMagenta, fraction)
     val density = LocalDensity.current
     val thumbRadiusPx = with(density) { 9.dp.toPx() }
     val trackStroke = with(density) { 5.dp.toPx() }
@@ -684,7 +696,7 @@ private fun VerticalNeonSlider(
 
             // inactive track
             drawLine(
-                color = Color(0xFF2A2438),
+                color = colors.borderFaint,
                 start = Offset(centerX, trackTop),
                 end = Offset(centerX, trackBottom),
                 strokeWidth = trackStroke,
@@ -709,7 +721,7 @@ private fun VerticalNeonSlider(
                 center = Offset(centerX, thumbY)
             )
             drawCircle(
-                color = Color(0xFF0B0F1A),
+                color = colors.surface,
                 radius = thumbRadiusPx * 0.38f,
                 center = Offset(centerX, thumbY)
             )
@@ -805,4 +817,42 @@ private fun LockOverlay(onUnlock: () -> Unit) {
             }
         }
     }
+}
+
+/**
+ * Shown when the user presses the system back button from the main screen,
+ * so a stray back press can't silently kill an active loopback session.
+ */
+@Composable
+fun ExitConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val colors = MaterialTheme.microBlastColors
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.surface,
+        titleContentColor = colors.textPrimary,
+        textContentColor = colors.textSecondary,
+        title = { Text(stringResource(R.string.exit_confirm_title)) },
+        text = { Text(stringResource(R.string.exit_confirm_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.exit_confirm_yes),
+                    color = colors.accentMagenta,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.exit_confirm_cancel),
+                    color = colors.accentCyan
+                )
+            }
+        }
+    )
 }
