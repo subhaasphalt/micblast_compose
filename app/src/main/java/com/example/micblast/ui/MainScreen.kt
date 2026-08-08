@@ -558,7 +558,7 @@ private fun IntensityColumn(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Subtle",
+            text = "Normal",
             color = colors.textSecondary,
             fontSize = 10.sp
         )
