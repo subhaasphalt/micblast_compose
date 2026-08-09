@@ -507,7 +507,7 @@ private fun ModeButton(
             VoiceModeIcon(
                 modeId = mode.id,
                 tint = mode.color,
-                modifier = Modifier.size(34.dp)
+                modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
