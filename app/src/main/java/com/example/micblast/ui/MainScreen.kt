@@ -1,6 +1,7 @@
 package com.example.micblast.ui
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -399,7 +400,13 @@ private fun LoudnessSection(
 ) {
     val colors = MaterialTheme.microBlastColors
     var showTooltip by remember { mutableStateOf(false) }
-    val gain = 1.0f + (progress / 100f)
+    val fraction = (progress / 100f).coerceIn(0f, 1f)
+    val gain = 1.0f + fraction
+    val valueColor by animateColorAsState(
+        targetValue = lerp(colors.accentCyan, colors.accentMagenta, fraction),
+        animationSpec = tween(120),
+        label = "loudnessValueColor"
+    )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -454,7 +461,7 @@ private fun LoudnessSection(
 
         Text(
             text = "%.1f×".format(gain),
-            color = colors.textPrimary,
+            color = valueColor,
             fontWeight = FontWeight.Bold,
             fontSize = 14.sp
         )
@@ -471,13 +478,13 @@ private fun LoudnessSection(
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.loudness_min),
-            color = colors.textMuted,
+            color = colors.accentCyan.copy(alpha = 0.90f),
             fontSize = 11.sp,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = stringResource(R.string.loudness_max),
-            color = colors.textMuted,
+            color = colors.accentMagenta.copy(alpha = 0.90f),
             fontSize = 11.sp,
             textAlign = TextAlign.End,
             modifier = Modifier.weight(1f)
@@ -600,8 +607,9 @@ private fun IntensityColumn(
     ) {
         Text(
             text = "Extreme",
-            color = colors.textSecondary,
-            fontSize = 10.sp
+            color = colors.accentMagenta,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -617,8 +625,9 @@ private fun IntensityColumn(
 
         Text(
             text = "Normal",
-            color = colors.textSecondary,
-            fontSize = 10.sp
+            color = colors.accentCyan,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
