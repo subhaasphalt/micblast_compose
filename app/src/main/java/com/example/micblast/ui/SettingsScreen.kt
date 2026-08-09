@@ -64,13 +64,14 @@ fun SettingsScreen(
             IconButton(
                 onClick = { hapticClick(); onBack() },
                 modifier = Modifier
-                    .size(42.dp)
-                    .border(1.dp, colors.accentCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                    .size(44.dp)
+                    .border(1.5.dp, colors.accentCyan.copy(alpha = 0.78f), RoundedCornerShape(12.dp))
             ) {
                 Icon(
                     imageVector = Icons.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.back_button_cd),
-                    tint = colors.accentCyan
+                    tint = colors.accentCyan,
+                    modifier = Modifier.size(26.dp)
                 )
             }
 
@@ -84,7 +85,7 @@ fun SettingsScreen(
             )
 
             // Balances the back button so the title stays visually centered.
-            Spacer(modifier = Modifier.size(42.dp))
+            Spacer(modifier = Modifier.size(44.dp))
         }
 
         Spacer(modifier = Modifier.height(28.dp))

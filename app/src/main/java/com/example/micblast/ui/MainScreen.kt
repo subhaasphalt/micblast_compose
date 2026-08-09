@@ -441,10 +441,21 @@ private fun LoudnessSection(
         label = "loudnessValueColor"
     )
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        SectionHeader(label = stringResource(R.string.loudness_label))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.loudness_label),
+            color = colors.textPrimary.copy(alpha = 0.92f),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp
+        )
 
-        Box {
+        Box(
+            modifier = Modifier.size(28.dp),
+            contentAlignment = Alignment.Center
+        ) {
             IconButton(
                 onClick = { showTooltip = true },
                 modifier = Modifier.size(28.dp)
