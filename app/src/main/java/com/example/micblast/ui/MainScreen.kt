@@ -195,12 +195,12 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
             modifier = Modifier
                 .size(44.dp)
                 .background(colors.surface, RoundedCornerShape(12.dp))
-                .border(1.5.dp, colors.accentCyan.copy(alpha = 0.78f), RoundedCornerShape(12.dp))
+                .border(1.5.dp, colors.accentPrimary.copy(alpha = 0.78f), RoundedCornerShape(12.dp))
         ) {
             Icon(
                 imageVector = Icons.Filled.Menu,
                 contentDescription = stringResource(R.string.menu_button_cd),
-                tint = colors.accentCyan
+                tint = colors.accentPrimary
             )
         }
 
@@ -210,8 +210,8 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        colors.accentCyan,
-                        colors.accentMagenta
+                        colors.accentPrimary,
+                        colors.accentSecondary
                     )
                 )
             ),
@@ -224,12 +224,12 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
             onClick = onLockClick,
             modifier = Modifier
                 .size(44.dp)
-                .border(1.5.dp, colors.accentMagenta, CircleShape)
+                .border(1.5.dp, colors.accentSecondary, CircleShape)
         ) {
             Icon(
                 imageVector = Icons.Filled.Lock,
                 contentDescription = stringResource(R.string.lock_button_cd),
-                tint = colors.accentMagenta
+                tint = colors.accentSecondary
             )
         }
     }
@@ -245,9 +245,9 @@ private fun PrimaryActionButton(
 
     val accent by androidx.compose.animation.animateColorAsState(
         targetValue = if (isRunning) {
-            colors.accentMagenta
+            colors.accentSecondary
         } else {
-            colors.accentCyan
+            colors.accentPrimary
         },
         animationSpec = tween(260),
         label = "primaryButtonAccent"
@@ -447,7 +447,7 @@ private fun LoudnessSection(
                 Icon(
                     imageVector = Icons.Filled.Info,
                     contentDescription = stringResource(R.string.loudness_info_cd),
-                    tint = colors.accentCyan,
+                    tint = colors.accentPrimary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -492,13 +492,13 @@ private fun LoudnessSection(
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.loudness_min),
-            color = colors.accentCyan.copy(alpha = 0.90f),
+            color = colors.accentPrimary.copy(alpha = 0.90f),
             fontSize = 11.sp,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = stringResource(R.string.loudness_max),
-            color = colors.accentMagenta.copy(alpha = 0.90f),
+            color = colors.accentSecondary.copy(alpha = 0.90f),
             fontSize = 11.sp,
             textAlign = TextAlign.End,
             modifier = Modifier.weight(1f)
@@ -516,10 +516,10 @@ private fun ModeAndIntensityGroup(
 ) {
     val colors = MaterialTheme.microBlastColors
     val modes = listOf(
-        VoiceModeUi(AudioLoopbackService.MODE_NORMAL, "Normal", colors.accentCyan),
-        VoiceModeUi(AudioLoopbackService.MODE_CHIPMUNK, "Chipmunk", colors.accentMagenta),
-        VoiceModeUi(AudioLoopbackService.MODE_DEEP, "Monster", colors.accentGreen),
-        VoiceModeUi(AudioLoopbackService.MODE_ROBOT, "Robot", colors.accentPurple)
+        VoiceModeUi(AudioLoopbackService.MODE_NORMAL, "Normal", colors.mode1AccentColor),
+        VoiceModeUi(AudioLoopbackService.MODE_CHIPMUNK, "Chipmunk", colors.mode2AccentColor),
+        VoiceModeUi(AudioLoopbackService.MODE_DEEP, "Monster", colors.mode3AccentColor),
+        VoiceModeUi(AudioLoopbackService.MODE_ROBOT, "Robot", colors.mode4AccentColor)
     )
 
     Card(
@@ -621,7 +621,7 @@ private fun IntensityColumn(
     ) {
         Text(
             text = "Extreme",
-            color = colors.accentMagenta,
+            color = colors.accentSecondary,
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium
         )
@@ -639,7 +639,7 @@ private fun IntensityColumn(
 
         Text(
             text = "Normal",
-            color = colors.accentCyan,
+            color = colors.accentPrimary,
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium
         )
@@ -655,7 +655,7 @@ private fun HorizontalNeonSlider(
 ) {
     val colors = MaterialTheme.microBlastColors
     val fraction = (progress / 100f).coerceIn(0f, 1f)
-    val thumbColor = lerp(colors.accentCyan, colors.accentMagenta, fraction)
+    val thumbColor = lerp(colors.accentPrimary, colors.accentSecondary, fraction)
     val density = LocalDensity.current
     val thumbRadiusPx = with(density) { 9.dp.toPx() }
     val trackStroke = with(density) { 5.dp.toPx() }
@@ -737,7 +737,7 @@ private fun VerticalNeonSlider(
 ) {
     val colors = MaterialTheme.microBlastColors
     val fraction = (progress / 100f).coerceIn(0f, 1f)
-    val thumbColor = lerp(colors.accentCyan, colors.accentMagenta, fraction)
+    val thumbColor = lerp(colors.accentPrimary, colors.accentSecondary, fraction)
     val density = LocalDensity.current
     val thumbRadiusPx = with(density) { 9.dp.toPx() }
     val trackStroke = with(density) { 5.dp.toPx() }
@@ -922,7 +922,7 @@ fun ExitConfirmationDialog(
             TextButton(onClick = onConfirm) {
                 Text(
                     text = stringResource(R.string.exit_confirm_yes),
-                    color = colors.accentMagenta,
+                    color = colors.accentSecondary,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -931,7 +931,7 @@ fun ExitConfirmationDialog(
             TextButton(onClick = onDismiss) {
                 Text(
                     text = stringResource(R.string.exit_confirm_cancel),
-                    color = colors.accentCyan
+                    color = colors.accentPrimary
                 )
             }
         }

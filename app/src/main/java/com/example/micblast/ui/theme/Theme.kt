@@ -9,11 +9,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * All the colors MainScreen actually reaches for. Two instances exist —
- * NeonColors (dark) and LightColors — and MicBlastTheme picks between them
- * based on the darkTheme flag. Every composable downstream reads through
- * MaterialTheme.microBlastColors, so switching themes in Settings updates
- * the whole screen automatically.
+ * All the colors MainScreen actually reaches for. Built by merging a
+ * [ThemeSpec] (the 6 accent colors + mode-support flag) with whichever
+ * shared surface palette matches the active light/dark mode. Every
+ * composable downstream reads through MaterialTheme.microBlastColors, so
+ * switching either the theme or the mode in Settings updates the whole
+ * screen automatically.
  */
 data class MicBlastColors(
     val bgTop: Color,
@@ -22,69 +23,76 @@ data class MicBlastColors(
     val surface: Color,
     val surfaceChip: Color,
     val borderFaint: Color,
-    val accentCyan: Color,
-    val accentMagenta: Color,
-    val accentGreen: Color,
-    val accentPurple: Color,
+    val accentPrimary: Color,
+    val accentSecondary: Color,
+    val mode1AccentColor: Color,
+    val mode2AccentColor: Color,
+    val mode3AccentColor: Color,
+    val mode4AccentColor: Color,
     val textPrimary: Color,
     val textSecondary: Color,
     val textMuted: Color,
 )
 
-val NeonColors = MicBlastColors(
-    bgTop = NeonPalette.BgTop,
-    bgMid = NeonPalette.BgMid,
-    bgBottom = NeonPalette.BgBottom,
-    surface = NeonPalette.Surface,
-    surfaceChip = NeonPalette.SurfaceChip,
-    borderFaint = NeonPalette.BorderFaint,
-    accentCyan = NeonPalette.Cyan,
-    accentMagenta = NeonPalette.Magenta,
-    accentGreen = NeonPalette.Green,
-    accentPurple = NeonPalette.Purple,
-    textPrimary = NeonPalette.TextPrimary,
-    textSecondary = NeonPalette.TextSecondary,
-    textMuted = NeonPalette.TextMuted,
-)
+/**
+ * Combines a theme's accents with the shared surface palette for [darkTheme].
+ * This is the one place theme + mode actually get merged.
+ */
+fun buildMicBlastColors(theme: ThemeSpec, darkTheme: Boolean): MicBlastColors {
+    val surfaces = if (darkTheme) DarkSurfacePalette else LightSurfacePalette
+    return MicBlastColors(
+        bgTop = surfaces.BgTop,
+        bgMid = surfaces.BgMid,
+        bgBottom = surfaces.BgBottom,
+        surface = surfaces.Surface,
+        surfaceChip = surfaces.SurfaceChip,
+        borderFaint = surfaces.BorderFaint,
+        accentPrimary = theme.accentPrimary,
+        accentSecondary = theme.accentSecondary,
+        mode1AccentColor = theme.mode1AccentColor,
+        mode2AccentColor = theme.mode2AccentColor,
+        mode3AccentColor = theme.mode3AccentColor,
+        mode4AccentColor = theme.mode4AccentColor,
+        textPrimary = surfaces.TextPrimary,
+        textSecondary = surfaces.TextSecondary,
+        textMuted = surfaces.TextMuted,
+    )
+}
 
-val LightColors = MicBlastColors(
-    bgTop = LightPalette.BgTop,
-    bgMid = LightPalette.BgMid,
-    bgBottom = LightPalette.BgBottom,
-    surface = LightPalette.Surface,
-    surfaceChip = LightPalette.SurfaceChip,
-    borderFaint = LightPalette.BorderFaint,
-    accentCyan = LightPalette.Cyan,
-    accentMagenta = LightPalette.Magenta,
-    accentGreen = LightPalette.Green,
-    accentPurple = LightPalette.Purple,
-    textPrimary = LightPalette.TextPrimary,
-    textSecondary = LightPalette.TextSecondary,
-    textMuted = LightPalette.TextMuted,
-)
-
-private val LocalMicBlastColors = staticCompositionLocalOf { NeonColors }
+private val LocalMicBlastColors = staticCompositionLocalOf {
+    buildMicBlastColors(DefaultTheme, darkTheme = true)
+}
 
 /**
- * Extension on MaterialTheme so call sites read `MaterialTheme.microBlastColors.accentCyan`,
+ * Extension on MaterialTheme so call sites read `MaterialTheme.microBlastColors.accentPrimary`,
  * the same shape as the built-in `MaterialTheme.colorScheme`.
  */
 val MaterialTheme.microBlastColors: MicBlastColors
     @Composable
     get() = LocalMicBlastColors.current
 
+/**
+ * @param theme the active [ThemeSpec] (see [AppThemes]).
+ * @param darkTheme the user's requested mode. If [theme] doesn't support
+ *   both modes, this is overridden internally via
+ *   [ThemeModeSupport.resolveDarkTheme] — callers (MainActivity) should
+ *   still resolve the effective mode themselves too, so the Settings
+ *   toggle's displayed on/off state stays in sync with what's rendered.
+ */
 @Composable
 fun MicBlastTheme(
+    theme: ThemeSpec = DefaultTheme,
     darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) NeonColors else LightColors
+    val effectiveDarkTheme = theme.allowLightDark.resolveDarkTheme(darkTheme)
+    val colors = buildMicBlastColors(theme, effectiveDarkTheme)
 
     CompositionLocalProvider(LocalMicBlastColors provides colors) {
-        val scheme = if (darkTheme) {
+        val scheme = if (effectiveDarkTheme) {
             darkColorScheme(
-                primary = colors.accentCyan,
-                secondary = colors.accentMagenta,
+                primary = colors.accentPrimary,
+                secondary = colors.accentSecondary,
                 background = colors.bgTop,
                 surface = colors.surface,
                 onBackground = colors.textPrimary,
@@ -92,8 +100,8 @@ fun MicBlastTheme(
             )
         } else {
             lightColorScheme(
-                primary = colors.accentCyan,
-                secondary = colors.accentMagenta,
+                primary = colors.accentPrimary,
+                secondary = colors.accentSecondary,
                 background = colors.bgTop,
                 surface = colors.surface,
                 onBackground = colors.textPrimary,
