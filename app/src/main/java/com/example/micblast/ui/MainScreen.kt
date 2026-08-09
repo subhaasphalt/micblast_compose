@@ -233,33 +233,79 @@ private fun PrimaryActionButton(
     onPlayClick: () -> Unit,
     onStopClick: () -> Unit
 ) {
-    AnimatedContent(
-        targetState = isRunning,
-        transitionSpec = {
-            scaleIn(tween(260), initialScale = 0.7f) togetherWith
-                    scaleOut(tween(200), targetScale = 0.7f)
-        },
-        contentAlignment = Alignment.Center,
-        label = "playStopMorph"
-    ) { running ->
-        val colors = MaterialTheme.microBlastColors
-        val diameter = if (running) 86.dp else 96.dp
-        val accent = if (running) colors.accentMagenta else colors.accentCyan
+    val colors = MaterialTheme.microBlastColors
 
-        Box(
-            modifier = Modifier
-                .size(diameter)
-                .clip(CircleShape)
-                .background(colors.surface)
-                .border(2.5.dp, accent, CircleShape),
-            contentAlignment = Alignment.Center
+    val accent by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isRunning) {
+            colors.accentMagenta
+        } else {
+            colors.accentCyan
+        },
+        animationSpec = tween(220),
+        label = "primaryButtonAccent"
+    )
+
+    val iconScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isRunning) 1f else 0.92f,
+        animationSpec = tween(180),
+        label = "primaryButtonIconScale"
+    )
+
+    val iconRotation by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isRunning) 0f else -90f,
+        animationSpec = tween(220),
+        label = "primaryButtonIconRotation"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(96.dp)
+            .clip(CircleShape)
+            .background(colors.surface)
+            .border(
+                width = 2.5.dp,
+                color = accent,
+                shape = CircleShape
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(
+            onClick = if (isRunning) onStopClick else onPlayClick,
+            modifier = Modifier.size(72.dp)
         ) {
-            IconButton(onClick = if (running) onStopClick else onPlayClick) {
+            AnimatedContent(
+                targetState = isRunning,
+                transitionSpec = {
+                    scaleIn(
+                        animationSpec = tween(180),
+                        initialScale = 0.65f
+                    ) togetherWith scaleOut(
+                        animationSpec = tween(120),
+                        targetScale = 0.65f
+                    )
+                },
+                contentAlignment = Alignment.Center,
+                label = "playStopIcon"
+            ) { running ->
                 Icon(
-                    imageVector = if (running) Icons.Filled.Stop else Icons.Filled.PlayArrow,
-                    contentDescription = null,
+                    imageVector = if (running) {
+                        Icons.Filled.Stop
+                    } else {
+                        Icons.Filled.PlayArrow
+                    },
+                    contentDescription = if (running) {
+                        "Stop"
+                    } else {
+                        "Play"
+                    },
                     tint = accent,
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier
+                        .size(38.dp)
+                        .graphicsLayer {
+                            scaleX = iconScale
+                            scaleY = iconScale
+                            rotationZ = iconRotation
+                        }
                 )
             }
         }
