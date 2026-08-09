@@ -190,8 +190,9 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
         IconButton(
             onClick = onMenuClick,
             modifier = Modifier
-                .size(42.dp)
-                .border(1.dp, colors.accentCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .size(44.dp)
+                .background(colors.surface, RoundedCornerShape(12.dp))
+                .border(1.5.dp, colors.accentCyan.copy(alpha = 0.78f), RoundedCornerShape(12.dp))
         ) {
             Icon(
                 imageVector = Icons.Filled.Menu,
@@ -246,8 +247,9 @@ private fun PrimaryActionButton(
         modifier = Modifier.size(96.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Very subtle theme-colored halo. It adds depth in neon themes
-        // without forcing a neon appearance on the other themes.
+        // Keep the control visually consistent with the 1.5dp borders used
+        // throughout the rest of the interface. The halo remains subtle so
+        // the same geometry works across all themes.
         Box(
             modifier = Modifier
                 .size(96.dp)
@@ -255,35 +257,28 @@ private fun PrimaryActionButton(
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            accent.copy(alpha = 0.10f),
-                            accent.copy(alpha = 0.035f),
+                            accent.copy(alpha = 0.08f),
+                            accent.copy(alpha = 0.025f),
                             Color.Transparent
                         )
                     )
                 )
         )
 
-        // Main control surface.
         Box(
             modifier = Modifier
                 .size(92.dp)
                 .clip(CircleShape)
                 .background(colors.surface)
                 .border(
-                    width = 1.dp,
-                    color = colors.borderFaint,
-                    shape = CircleShape
-                )
-                .border(
-                    width = 1.25.dp,
+                    width = 1.5.dp,
                     color = accent.copy(
-                        alpha = if (isRunning) 0.95f else 0.78f
+                        alpha = if (isRunning) 1f else 0.78f
                     ),
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Inner surface creates a restrained recessed-control effect.
             Box(
                 modifier = Modifier
                     .size(70.dp)
@@ -295,11 +290,6 @@ private fun PrimaryActionButton(
                                 colors.surface
                             )
                         )
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = colors.borderFaint.copy(alpha = 0.55f),
-                        shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -318,7 +308,11 @@ private fun PrimaryActionButton(
                             } else {
                                 Icons.Filled.PlayArrow
                             },
-                            contentDescription = if (running) "Stop" else "Play",
+                            contentDescription = if (running) {
+                                "Stop"
+                            } else {
+                                "Play"
+                            },
                             tint = accent,
                             modifier = Modifier.size(34.dp)
                         )
