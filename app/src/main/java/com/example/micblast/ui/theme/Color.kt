@@ -91,24 +91,40 @@ object LightBase {
  * variety without fighting the main gradient.
  */
 fun buildColors(darkTheme: Boolean, accent: AccentTheme): MicBlastColors {
-    val base = if (darkTheme) DarkBase else LightBase
-
     val supportGreen = if (darkTheme) Color(0xFF39FF14) else Color(0xFF1FA850)
     val supportPurple = if (darkTheme) Color(0xFFBF5AF2) else Color(0xFF7C4FE0)
 
-    return MicBlastColors(
-        bgTop = base.BgTop,
-        bgMid = base.BgMid,
-        bgBottom = base.BgBottom,
-        surface = base.Surface,
-        surfaceChip = base.SurfaceChip,
-        borderFaint = base.BorderFaint,
-        accentCyan = accent.start,
-        accentMagenta = accent.end,
-        accentGreen = supportGreen,
-        accentPurple = supportPurple,
-        textPrimary = base.TextPrimary,
-        textSecondary = base.TextSecondary,
-        textMuted = base.TextMuted,
-    )
+    return if (darkTheme) {
+        MicBlastColors(
+            bgTop = DarkBase.BgTop,
+            bgMid = DarkBase.BgMid,
+            bgBottom = DarkBase.BgBottom,
+            surface = DarkBase.Surface,
+            surfaceChip = DarkBase.SurfaceChip,
+            borderFaint = DarkBase.BorderFaint,
+            accentCyan = accent.start,
+            accentMagenta = accent.end,
+            accentGreen = supportGreen,
+            accentPurple = supportPurple,
+            textPrimary = DarkBase.TextPrimary,
+            textSecondary = DarkBase.TextSecondary,
+            textMuted = DarkBase.TextMuted,
+        )
+    } else {
+        MicBlastColors(
+            bgTop = LightBase.BgTop,
+            bgMid = LightBase.BgMid,
+            bgBottom = LightBase.BgBottom,
+            surface = LightBase.Surface,
+            surfaceChip = LightBase.SurfaceChip,
+            borderFaint = LightBase.BorderFaint,
+            accentCyan = accent.start,
+            accentMagenta = accent.end,
+            accentGreen = supportGreen,
+            accentPurple = supportPurple,
+            textPrimary = LightBase.TextPrimary,
+            textSecondary = LightBase.TextSecondary,
+            textMuted = LightBase.TextMuted,
+        )
+    }
 }
