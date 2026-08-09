@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only used for the native window background / status & nav bars
+         shown briefly before Compose takes over (see themes.xml). All other
+         theme colors live in ui/theme/Color.kt (NeonPalette / LightPalette)
+         and are driven from Kotlin, not XML. -->
+    <color name="neon_bg_top">#0B0A1A</color>
+</resources>
