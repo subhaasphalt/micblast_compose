@@ -100,6 +100,7 @@ fun MainScreen(
     audioSetupIndex: Int,
     audioSetupLabels: List<String>,
     isLocked: Boolean,
+    hapticsEnabled: Boolean,
     onPlayClick: () -> Unit,
     onStopClick: () -> Unit,
     onModeSelect: (String) -> Unit,
@@ -111,6 +112,7 @@ fun MainScreen(
     onMenuClick: () -> Unit,
 ) {
     val colors = MaterialTheme.microBlastColors
+    val hapticClick = rememberHapticClick(hapticsEnabled)
 
     Box(
         modifier = Modifier
@@ -130,7 +132,10 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            TopBar(onMenuClick = onMenuClick, onLockClick = onLockClick)
+            TopBar(
+                onMenuClick = { hapticClick(); onMenuClick() },
+                onLockClick = { hapticClick(); onLockClick() },
+            )
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -140,8 +145,8 @@ fun MainScreen(
             ) {
                 PrimaryActionButton(
                     isRunning = isRunning,
-                    onPlayClick = onPlayClick,
-                    onStopClick = onStopClick
+                    onPlayClick = { hapticClick(); onPlayClick() },
+                    onStopClick = { hapticClick(); onStopClick() }
                 )
             }
 
@@ -150,7 +155,7 @@ fun MainScreen(
             AudioSetupDropdown(
                 selectedIndex = audioSetupIndex,
                 labels = audioSetupLabels,
-                onSelect = onAudioSetupSelect
+                onSelect = { index -> hapticClick(); onAudioSetupSelect(index) }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -164,7 +169,7 @@ fun MainScreen(
 
             ModeAndIntensityGroup(
                 currentMode = currentMode,
-                onModeSelect = onModeSelect,
+                onModeSelect = { mode -> hapticClick(); onModeSelect(mode) },
                 intensityProgress = intensityProgress,
                 intensityEnabled = currentMode != AudioLoopbackService.MODE_NORMAL,
                 onIntensityChange = onIntensityChange
@@ -172,7 +177,7 @@ fun MainScreen(
         }
 
         if (isLocked) {
-            LockOverlay(onUnlock = onUnlock)
+            LockOverlay(onUnlock = { hapticClick(); onUnlock() })
         }
     }
 }

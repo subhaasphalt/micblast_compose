@@ -40,6 +40,8 @@ class MainActivity : ComponentActivity() {
     private var showSettings by mutableStateOf(false)
     private var showExitConfirmation by mutableStateOf(false)
     private var darkTheme by mutableStateOf(true)
+    private var autoRotate by mutableStateOf(true)
+    private var hapticsEnabled by mutableStateOf(true)
 
     private val settingsPrefs by lazy {
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -75,8 +77,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setupOrientationLock()
         darkTheme = settingsPrefs.getBoolean(KEY_DARK_THEME, true)
+        autoRotate = settingsPrefs.getBoolean(KEY_AUTO_ROTATE, true)
+        hapticsEnabled = settingsPrefs.getBoolean(KEY_HAPTICS, true)
+        setupOrientationLock()
 
         setContent {
             MicBlastTheme(darkTheme = darkTheme) {
@@ -100,6 +104,10 @@ class MainActivity : ComponentActivity() {
                     SettingsScreen(
                         darkTheme = darkTheme,
                         onDarkThemeChange = ::onDarkThemeChanged,
+                        autoRotate = autoRotate,
+                        onAutoRotateChange = ::onAutoRotateChanged,
+                        hapticFeedback = hapticsEnabled,
+                        onHapticFeedbackChange = ::onHapticsChanged,
                         onBack = { showSettings = false },
                     )
                 } else {
@@ -111,6 +119,7 @@ class MainActivity : ComponentActivity() {
                         audioSetupIndex = audioSetupIndex,
                         audioSetupLabels = stringArrayResource(R.array.audio_setup_options).toList(),
                         isLocked = isLocked,
+                        hapticsEnabled = hapticsEnabled,
                         onPlayClick = ::onPlayRequested,
                         onStopClick = ::stopLoopback,
                         onModeSelect = ::selectMode,
@@ -140,6 +149,25 @@ class MainActivity : ComponentActivity() {
     private fun onDarkThemeChanged(enabled: Boolean) {
         darkTheme = enabled
         settingsPrefs.edit().putBoolean(KEY_DARK_THEME, enabled).apply()
+    }
+
+    private fun onAutoRotateChanged(enabled: Boolean) {
+        autoRotate = enabled
+        settingsPrefs.edit().putBoolean(KEY_AUTO_ROTATE, enabled).apply()
+        if (enabled) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            if (orientationEventListener?.canDetectOrientation() == true) {
+                orientationEventListener?.enable()
+            }
+        } else {
+            orientationEventListener?.disable()
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    private fun onHapticsChanged(enabled: Boolean) {
+        hapticsEnabled = enabled
+        settingsPrefs.edit().putBoolean(KEY_HAPTICS, enabled).apply()
     }
 
     private fun onPlayRequested() {
@@ -257,9 +285,20 @@ class MainActivity : ComponentActivity() {
     // Restricts rotation to portrait and reverse-portrait ourselves. MIUI's
     // built-in "sensorPortrait" handling silently drops the 180° flip, so
     // instead the activity is left as fullSensor in the manifest and we pick
-    // the orientation directly from the raw sensor angle. Always active —
-    // there's no user-facing toggle for this anymore.
+    // the orientation directly from the raw sensor angle.
+    //
+    // Bug fix: previously requestedOrientation was left at its manifest
+    // default (fullSensor) until the *first* sensor callback landed in the
+    // portrait or reverse-portrait bucket. If the phone was already near
+    // 90°/270° (the landscape dead zone, intentionally ignored below) at
+    // that first callback — e.g. a cold start while mid-rotation — nothing
+    // ever set requestedOrientation away from fullSensor, so the activity
+    // could launch, or get stuck, sideways. Locking to PORTRAIT immediately
+    // gives the dead zone a real "last known state" to hold onto instead of
+    // falling through to fullSensor.
     private fun setupOrientationLock() {
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
         orientationEventListener = object : OrientationEventListener(this) {
             override fun onOrientationChanged(orientation: Int) {
                 if (orientation == ORIENTATION_UNKNOWN) return
@@ -269,10 +308,15 @@ class MainActivity : ComponentActivity() {
                     orientation in 151..209 ->
                         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
                     // Angles near 90/270 would be landscape — this app never rotates to it.
+                    // Whatever portrait/reverse-portrait state was last set (PORTRAIT, above,
+                    // if nothing has fired yet) is simply held through this range.
                 }
             }
         }
-        if (orientationEventListener?.canDetectOrientation() == true) {
+
+        // Only listen for rotation when the user has Auto Rotate on; otherwise
+        // stay locked to plain portrait, matching the system's own Auto Rotate toggle.
+        if (autoRotate && orientationEventListener?.canDetectOrientation() == true) {
             orientationEventListener?.enable()
         }
     }
@@ -301,5 +345,7 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val PREFS_NAME = "micblast_settings"
         const val KEY_DARK_THEME = "dark_theme"
+        const val KEY_AUTO_ROTATE = "auto_rotate"
+        const val KEY_HAPTICS = "haptics_enabled"
     }
 }

@@ -38,9 +38,14 @@ import com.example.micblast.ui.theme.microBlastColors
 fun SettingsScreen(
     darkTheme: Boolean,
     onDarkThemeChange: (Boolean) -> Unit,
+    autoRotate: Boolean,
+    onAutoRotateChange: (Boolean) -> Unit,
+    hapticFeedback: Boolean,
+    onHapticFeedbackChange: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     val colors = MaterialTheme.microBlastColors
+    val hapticClick = rememberHapticClick(hapticFeedback)
 
     Column(
         modifier = Modifier
@@ -57,7 +62,7 @@ fun SettingsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = onBack,
+                onClick = { hapticClick(); onBack() },
                 modifier = Modifier
                     .size(42.dp)
                     .border(1.dp, colors.accentCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
@@ -84,46 +89,85 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        Card(
-            colors = CardDefaults.cardColors(containerColor = colors.surface),
-            border = BorderStroke(1.dp, colors.borderFaint),
-            shape = RoundedCornerShape(18.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.dark_mode_label),
-                        color = colors.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(
-                            if (darkTheme) R.string.dark_mode_on_desc else R.string.dark_mode_off_desc
-                        ),
-                        color = colors.textSecondary,
-                        fontSize = 12.sp
-                    )
-                }
+        SettingsToggleCard(
+            label = stringResource(R.string.dark_mode_label),
+            description = stringResource(
+                if (darkTheme) R.string.dark_mode_on_desc else R.string.dark_mode_off_desc
+            ),
+            checked = darkTheme,
+            onCheckedChange = { hapticClick(); onDarkThemeChange(it) },
+        )
 
-                Switch(
-                    checked = darkTheme,
-                    onCheckedChange = onDarkThemeChange,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = colors.accentCyan,
-                        checkedTrackColor = colors.accentCyan.copy(alpha = 0.4f),
-                        uncheckedThumbColor = colors.textSecondary,
-                        uncheckedTrackColor = colors.borderFaint,
-                    )
+        Spacer(modifier = Modifier.height(14.dp))
+
+        SettingsToggleCard(
+            label = stringResource(R.string.auto_rotate_label),
+            description = stringResource(
+                if (autoRotate) R.string.auto_rotate_on_desc else R.string.auto_rotate_off_desc
+            ),
+            checked = autoRotate,
+            onCheckedChange = { hapticClick(); onAutoRotateChange(it) },
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        SettingsToggleCard(
+            label = stringResource(R.string.haptic_feedback_label),
+            description = stringResource(
+                if (hapticFeedback) R.string.haptic_feedback_on_desc else R.string.haptic_feedback_off_desc
+            ),
+            checked = hapticFeedback,
+            onCheckedChange = { hapticClick(); onHapticFeedbackChange(it) },
+        )
+    }
+}
+
+@Composable
+private fun SettingsToggleCard(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val colors = MaterialTheme.microBlastColors
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = BorderStroke(1.dp, colors.borderFaint),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    color = colors.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = description,
+                    color = colors.textSecondary,
+                    fontSize = 12.sp
                 )
             }
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = colors.accentCyan,
+                    checkedTrackColor = colors.accentCyan.copy(alpha = 0.4f),
+                    uncheckedThumbColor = colors.textSecondary,
+                    uncheckedTrackColor = colors.borderFaint,
+                )
+            )
         }
     }
 }

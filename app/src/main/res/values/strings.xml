@@ -11,6 +11,12 @@
     <string name="dark_mode_label">Dark Mode</string>
     <string name="dark_mode_on_desc">Neon dark theme</string>
     <string name="dark_mode_off_desc">Light theme</string>
+    <string name="auto_rotate_label">Auto Rotate</string>
+    <string name="auto_rotate_on_desc">Flips upside down when flipped</string>
+    <string name="auto_rotate_off_desc">Locked to portrait</string>
+    <string name="haptic_feedback_label">Haptic Feedback</string>
+    <string name="haptic_feedback_on_desc">Vibrate on button taps</string>
+    <string name="haptic_feedback_off_desc">No vibration on taps</string>
     <string name="exit_confirm_title">Exit MicBlast?</string>
     <string name="exit_confirm_message">This will close the app. Any active loopback audio will stop.</string>
     <string name="exit_confirm_yes">Exit</string>
