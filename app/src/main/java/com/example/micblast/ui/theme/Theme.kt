@@ -9,9 +9,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * All the colors MainScreen actually reaches for. Every theme pack produces
- * one of these. Composables read through MaterialTheme.microBlastColors so
- * switching themes in Settings updates the whole UI automatically.
+ * All the colors MainScreen reaches for. Built from dark/light base +
+ * the selected accent pair via [buildColors].
  */
 data class MicBlastColors(
     val bgTop: Color,
@@ -29,7 +28,9 @@ data class MicBlastColors(
     val textMuted: Color,
 )
 
-private val LocalMicBlastColors = staticCompositionLocalOf { AppTheme.NEON_PARTY.toColors() }
+private val LocalMicBlastColors = staticCompositionLocalOf {
+    buildColors(darkTheme = true, accent = AccentTheme.CLASSIC)
+}
 
 /**
  * Extension on MaterialTheme so call sites read `MaterialTheme.microBlastColors.accentCyan`,
@@ -41,13 +42,14 @@ val MaterialTheme.microBlastColors: MicBlastColors
 
 @Composable
 fun MicBlastTheme(
-    appTheme: AppTheme = AppTheme.NEON_PARTY,
+    darkTheme: Boolean = true,
+    accentTheme: AccentTheme = AccentTheme.CLASSIC,
     content: @Composable () -> Unit
 ) {
-    val colors = appTheme.toColors()
+    val colors = buildColors(darkTheme, accentTheme)
 
     CompositionLocalProvider(LocalMicBlastColors provides colors) {
-        val scheme = if (appTheme.isDark) {
+        val scheme = if (darkTheme) {
             darkColorScheme(
                 primary = colors.accentCyan,
                 secondary = colors.accentMagenta,

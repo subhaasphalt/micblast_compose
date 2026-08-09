@@ -9,14 +9,14 @@
     <string name="back_button_cd">Back</string>
     <string name="settings_title">Settings</string>
 
-    <!-- Theme section -->
-    <string name="theme_section_label">THEME</string>
+    <!-- Sections -->
+    <string name="appearance_section_label">APPEARANCE</string>
+    <string name="accent_section_label">ACCENT PAIR</string>
     <string name="behavior_section_label">BEHAVIOR</string>
 
-    <!-- Kept for reference / potential future use; dark mode is now theme-based -->
     <string name="dark_mode_label">Dark Mode</string>
-    <string name="dark_mode_on_desc">Neon dark theme</string>
-    <string name="dark_mode_off_desc">Light theme</string>
+    <string name="dark_mode_on_desc">Dark backgrounds</string>
+    <string name="dark_mode_off_desc">Light backgrounds</string>
 
     <string name="auto_rotate_label">Auto Rotate</string>
     <string name="auto_rotate_on_desc">Flips upside down when flipped</string>

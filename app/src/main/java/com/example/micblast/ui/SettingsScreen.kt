@@ -42,14 +42,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.micblast.R
-import com.example.micblast.ui.theme.AppTheme
+import com.example.micblast.ui.theme.AccentTheme
 import com.example.micblast.ui.theme.microBlastColors
-import com.example.micblast.ui.theme.toColors
 
 @Composable
 fun SettingsScreen(
-    appTheme: AppTheme,
-    onThemeChange: (AppTheme) -> Unit,
+    darkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
+    accentTheme: AccentTheme,
+    onAccentThemeChange: (AccentTheme) -> Unit,
     autoRotate: Boolean,
     onAutoRotateChange: (Boolean) -> Unit,
     hapticFeedback: Boolean,
@@ -104,15 +105,14 @@ fun SettingsScreen(
                 modifier = Modifier.weight(1f)
             )
 
-            // Balances the back button so the title stays visually centered.
             Spacer(modifier = Modifier.size(44.dp))
         }
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // ----- Theme section -----
+        // ----- Appearance -----
         Text(
-            text = stringResource(R.string.theme_section_label),
+            text = stringResource(R.string.appearance_section_label),
             color = colors.textSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
@@ -120,25 +120,44 @@ fun SettingsScreen(
             modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
         )
 
-        // 2-column grid of theme cards
-        val themes = AppTheme.entries
+        SettingsToggleCard(
+            label = stringResource(R.string.dark_mode_label),
+            description = stringResource(
+                if (darkTheme) R.string.dark_mode_on_desc else R.string.dark_mode_off_desc
+            ),
+            checked = darkTheme,
+            onCheckedChange = { hapticClick(); onDarkThemeChange(it) },
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ----- Accent pairs -----
+        Text(
+            text = stringResource(R.string.accent_section_label),
+            color = colors.textSecondary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.8.sp,
+            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
+        )
+
+        val themes = AccentTheme.entries
         themes.chunked(2).forEach { rowThemes ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 rowThemes.forEach { theme ->
-                    ThemePreviewCard(
+                    AccentPreviewCard(
                         theme = theme,
-                        isSelected = theme == appTheme,
+                        isSelected = theme == accentTheme,
                         onClick = {
                             hapticClick()
-                            onThemeChange(theme)
+                            onAccentThemeChange(theme)
                         },
                         modifier = Modifier.weight(1f)
                     )
                 }
-                // If odd number on last row, fill the space
                 if (rowThemes.size == 1) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
@@ -148,7 +167,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // ----- Behavior toggles -----
+        // ----- Behavior -----
         Text(
             text = stringResource(R.string.behavior_section_label),
             color = colors.textSecondary,
@@ -183,13 +202,12 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun ThemePreviewCard(
-    theme: AppTheme,
+private fun AccentPreviewCard(
+    theme: AccentTheme,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val palette = theme.toColors()
     val currentColors = MaterialTheme.microBlastColors
 
     Card(
@@ -199,8 +217,7 @@ private fun ThemePreviewCard(
             color = if (isSelected) currentColors.accentCyan else currentColors.borderFaint
         ),
         shape = RoundedCornerShape(16.dp),
-        modifier = modifier
-            .clickable(onClick = onClick)
+        modifier = modifier.clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier
@@ -208,56 +225,32 @@ private fun ThemePreviewCard(
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Mini color preview strip
+            // Horizontal gradient strip showing the pair
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(36.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(
-                        Brush.verticalGradient(
-                            colors = listOf(palette.bgTop, palette.bgMid, palette.bgBottom)
+                        Brush.horizontalGradient(
+                            colors = listOf(theme.start, theme.end)
                         )
                     )
-                    .border(1.dp, palette.borderFaint, RoundedCornerShape(10.dp))
             ) {
-                // Accent dots
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    listOf(
-                        palette.accentCyan,
-                        palette.accentMagenta,
-                        palette.accentGreen,
-                        palette.accentPurple
-                    ).forEach { accent ->
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(accent)
-                        )
-                    }
-                }
-
-                // Selected checkmark
                 if (isSelected) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 8.dp)
                             .size(20.dp)
                             .clip(CircleShape)
-                            .background(currentColors.accentCyan),
+                            .background(Color.Black.copy(alpha = 0.45f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Check,
                             contentDescription = null,
-                            tint = Color.Black,
+                            tint = Color.White,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -273,13 +266,6 @@ private fun ThemePreviewCard(
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
-
-            Text(
-                text = if (theme.isDark) "Dark" else "Light",
-                color = currentColors.textMuted,
-                fontSize = 11.sp,
                 textAlign = TextAlign.Center
             )
         }
