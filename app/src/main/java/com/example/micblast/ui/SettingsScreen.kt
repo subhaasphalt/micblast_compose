@@ -65,6 +65,7 @@ fun SettingsScreen(
                 onClick = { hapticClick(); onBack() },
                 modifier = Modifier
                     .size(44.dp)
+                    .background(colors.surface, RoundedCornerShape(12.dp))
                     .border(1.5.dp, colors.accentCyan.copy(alpha = 0.78f), RoundedCornerShape(12.dp))
             ) {
                 Icon(
@@ -77,8 +78,12 @@ fun SettingsScreen(
 
             Text(
                 text = stringResource(R.string.settings_title),
-                color = colors.textPrimary,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    brush = Brush.linearGradient(
+                        colors = listOf(colors.accentCyan, colors.accentMagenta)
+                    )
+                ),
                 fontSize = 17.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
@@ -134,7 +139,7 @@ private fun SettingsToggleCard(
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colors.surface),
-        border = BorderStroke(1.dp, colors.borderFaint),
+        border = BorderStroke(1.dp, if (checked) colors.accentCyan.copy(alpha = 0.34f) else colors.borderFaint),
         shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth()
     ) {

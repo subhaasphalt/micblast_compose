@@ -350,46 +350,49 @@ private fun AudioSetupDropdown(
         SectionHeader(label = stringResource(R.string.audio_setup_label))
 
         Box(modifier = Modifier.fillMaxWidth()) {
-            TextField(
-                value = selectedLabel,
-                onValueChange = {},
-                readOnly = true,
-                singleLine = true,
-                maxLines = 1,
-                trailingIcon = {
-                    Icon(
-                        imageVector = if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
-                        contentDescription = null,
-                        tint = colors.textSecondary
-                    )
-                },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = colors.surface,
-                    unfocusedContainerColor = colors.surface,
-                    focusedTextColor = colors.textPrimary,
-                    unfocusedTextColor = colors.textPrimary,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Box(
+            Row(
                 modifier = Modifier
-                    .matchParentSize()
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(colors.surface)
                     .clickable { expanded = !expanded }
-            )
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Keep the compact label single-line so long device routes
+                // never create an awkward second line on the main screen.
+                Text(
+                    text = selectedLabel,
+                    color = colors.textPrimary,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = colors.textSecondary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
 
             DropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth()
+                onDismissRequest = { expanded = false }
             ) {
                 labels.forEachIndexed { index, label ->
                     DropdownMenuItem(
-                        text = { Text(label, color = colors.textPrimary) },
+                        text = {
+                            Text(
+                                label,
+                                color = colors.textPrimary,
+                                fontSize = 15.sp
+                            )
+                        },
                         onClick = {
                             expanded = false
                             onSelect(index)
@@ -405,25 +408,13 @@ private fun AudioSetupDropdown(
 private fun SectionHeader(label: String) {
     val colors = MaterialTheme.microBlastColors
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(bottom = 8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .width(3.dp)
-                .height(17.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(colors.accentCyan)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = label,
-            color = colors.textPrimary.copy(alpha = 0.92f),
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp
-        )
-    }
+    Text(
+        text = label,
+        color = colors.textPrimary.copy(alpha = 0.92f),
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp,
+        modifier = Modifier.padding(bottom = 10.dp)
+    )
 }
 
 @Composable
@@ -433,13 +424,6 @@ private fun LoudnessSection(
 ) {
     val colors = MaterialTheme.microBlastColors
     var showTooltip by remember { mutableStateOf(false) }
-    val fraction = (progress / 100f).coerceIn(0f, 1f)
-    val gain = 1.0f + fraction
-    val valueColor by animateColorAsState(
-        targetValue = lerp(colors.accentCyan, colors.accentMagenta, fraction),
-        animationSpec = tween(120),
-        label = "loudnessValueColor"
-    )
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -449,7 +433,7 @@ private fun LoudnessSection(
             text = stringResource(R.string.loudness_label),
             color = colors.textPrimary.copy(alpha = 0.92f),
             fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp
+            fontSize = 18.sp
         )
 
         Box(
@@ -464,7 +448,7 @@ private fun LoudnessSection(
                     imageVector = Icons.Filled.Info,
                     contentDescription = stringResource(R.string.loudness_info_cd),
                     tint = colors.accentCyan,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
@@ -495,18 +479,9 @@ private fun LoudnessSection(
                 }
             }
         }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Text(
-            text = "%.1f×".format(gain),
-            color = valueColor,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp
-        )
     }
 
-    Spacer(modifier = Modifier.height(6.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
     HorizontalNeonSlider(
         progress = progress,
