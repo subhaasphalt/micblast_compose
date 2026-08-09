@@ -65,14 +65,71 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
-            startLoopback()
-        } else {
-            Toast.makeText(this, "Microphone permission is required", Toast.LENGTH_LONG).show()
+    // Holds whichever of startLoopback()/restartWithNewSetup() triggered the
+    // permission request currently in flight, so one launcher + one callback
+    // can serve both call sites instead of duplicating the permission logic.
+    private var pendingLoopbackAction: (() -> Unit)? = null
+
+    // RequestMultiplePermissions instead of a single RECORD_AUDIO request so
+    // BLUETOOTH_CONNECT (needed for the Bluetooth mic setup on API 31+) and
+    // POST_NOTIFICATIONS (needed to actually show the "live" notification on
+    // API 33+) can be asked for in the same system dialog.
+    private val requestPermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        val micGranted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+        val btGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+
+        val action = pendingLoopbackAction
+        pendingLoopbackAction = null
+
+        when {
+            !micGranted ->
+                Toast.makeText(this, "Microphone permission is required", Toast.LENGTH_LONG).show()
+            selectedAudioSetup() == AudioLoopbackService.SETUP_BT_MIC_TO_SPEAKER && !btGranted ->
+                Toast.makeText(this, "Bluetooth permission is required for this audio setup", Toast.LENGTH_LONG).show()
+            else -> action?.invoke()
         }
+        // POST_NOTIFICATIONS is intentionally not checked here — if it's
+        // denied, loopback still starts/continues fine, the persistent
+        // "live" notification just won't be visible.
+    }
+
+    // Figures out which permissions are still missing for the given audio
+    // setup. includeNotifications is left off for the "already running,
+    // just switching setups" path — the notification is already showing at
+    // that point, so there's nothing new to ask for there.
+    private fun missingPermissionsFor(setup: String, includeNotifications: Boolean): List<String> {
+        val needed = mutableListOf<String>()
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            needed += Manifest.permission.RECORD_AUDIO
+        }
+
+        // Only the Bluetooth *mic* setup touches startBluetoothSco(), which
+        // has required BLUETOOTH_CONNECT at runtime since API 31. The
+        // phone-mic-to-Bluetooth-speaker setup only reads output device
+        // info, which doesn't need it.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            setup == AudioLoopbackService.SETUP_BT_MIC_TO_SPEAKER &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+        ) {
+            needed += Manifest.permission.BLUETOOTH_CONNECT
+        }
+
+        if (includeNotifications &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            needed += Manifest.permission.POST_NOTIFICATIONS
+        }
+
+        return needed
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,6 +137,12 @@ class MainActivity : ComponentActivity() {
         darkTheme = settingsPrefs.getBoolean(KEY_DARK_THEME, true)
         autoRotate = settingsPrefs.getBoolean(KEY_AUTO_ROTATE, true)
         hapticsEnabled = settingsPrefs.getBoolean(KEY_HAPTICS, true)
+        currentMode = settingsPrefs.getString(KEY_MODE, AudioLoopbackService.MODE_NORMAL)
+            ?: AudioLoopbackService.MODE_NORMAL
+        gainProgress = settingsPrefs.getInt(KEY_GAIN_PROGRESS, 0).coerceIn(0, 100)
+        intensityProgress = settingsPrefs.getInt(KEY_INTENSITY_PROGRESS, 50).coerceIn(0, 100)
+        audioSetupIndex = settingsPrefs.getInt(KEY_AUDIO_SETUP_INDEX, 0)
+            .coerceIn(0, audioSetupValues.size - 1)
         setupOrientationLock()
 
         setContent {
@@ -171,10 +234,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onPlayRequested() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+        val needed = missingPermissionsFor(selectedAudioSetup(), includeNotifications = true)
+        if (needed.isEmpty()) {
             startLoopback()
         } else {
-            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            pendingLoopbackAction = ::startLoopback
+            requestPermissionsLauncher.launch(needed.toTypedArray())
         }
     }
 
@@ -183,6 +248,7 @@ class MainActivity : ComponentActivity() {
     // effect instantly, with no stop/restart of the mic or speaker.
     private fun selectMode(mode: String) {
         currentMode = mode
+        settingsPrefs.edit().putString(KEY_MODE, mode).apply()
         if (isRunning) {
             val intent = Intent(this, AudioLoopbackService::class.java).apply {
                 action = AudioLoopbackService.ACTION_CHANGE_MODE
@@ -214,8 +280,15 @@ class MainActivity : ComponentActivity() {
     // spins up, but no manual Stop/Play needed from the user.
     private fun onAudioSetupSelected(index: Int) {
         audioSetupIndex = index
+        settingsPrefs.edit().putInt(KEY_AUDIO_SETUP_INDEX, index).apply()
         if (isRunning) {
-            restartWithNewSetup()
+            val needed = missingPermissionsFor(selectedAudioSetup(), includeNotifications = false)
+            if (needed.isEmpty()) {
+                restartWithNewSetup()
+            } else {
+                pendingLoopbackAction = ::restartWithNewSetup
+                requestPermissionsLauncher.launch(needed.toTypedArray())
+            }
         }
     }
 
@@ -337,6 +410,17 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(stateReceiver)
     }
 
+    // Gain/intensity change continuously while dragging their sliders, so
+    // they're persisted once here (on backgrounding) rather than on every
+    // drag frame in onGainChanged/onIntensityChanged.
+    override fun onPause() {
+        super.onPause()
+        settingsPrefs.edit()
+            .putInt(KEY_GAIN_PROGRESS, gainProgress)
+            .putInt(KEY_INTENSITY_PROGRESS, intensityProgress)
+            .apply()
+    }
+
     override fun onDestroy() {
         orientationEventListener?.disable()
         super.onDestroy()
@@ -347,5 +431,9 @@ class MainActivity : ComponentActivity() {
         const val KEY_DARK_THEME = "dark_theme"
         const val KEY_AUTO_ROTATE = "auto_rotate"
         const val KEY_HAPTICS = "haptics_enabled"
+        const val KEY_MODE = "last_mode"
+        const val KEY_GAIN_PROGRESS = "last_gain_progress"
+        const val KEY_INTENSITY_PROGRESS = "last_intensity_progress"
+        const val KEY_AUDIO_SETUP_INDEX = "last_audio_setup_index"
     }
 }

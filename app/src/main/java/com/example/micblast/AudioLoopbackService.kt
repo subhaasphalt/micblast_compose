@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioFocusRequest
@@ -24,6 +25,7 @@ import android.os.Looper
 import android.os.Process
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import kotlin.math.PI
 import kotlin.math.sin
@@ -205,7 +207,17 @@ class AudioLoopbackService : Service() {
             return
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification())
+        // ServiceCompat (not the raw two-arg startForeground) so this
+        // declares FOREGROUND_SERVICE_TYPE_MICROPHONE on API 29+ — required
+        // at targetSdk 34 to match the manifest's foregroundServiceType and
+        // avoid a MissingForegroundServiceTypeException — while still
+        // falling back cleanly to the plain call on API < 29.
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            buildNotification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        )
 
         if (audioSetup == SETUP_BT_MIC_TO_SPEAKER) {
             // Bluetooth mic capture only works over the SCO (call-audio)
