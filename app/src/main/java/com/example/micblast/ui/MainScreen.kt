@@ -97,6 +97,7 @@ fun MainScreen(
     intensityProgress: Int,
     audioSetupIndex: Int,
     audioSetupLabels: List<String>,
+    audioSetupCompactLabels: List<String>,
     isLocked: Boolean,
     hapticsEnabled: Boolean,
     onPlayClick: () -> Unit,
@@ -153,6 +154,7 @@ fun MainScreen(
             AudioSetupDropdown(
                 selectedIndex = audioSetupIndex,
                 labels = audioSetupLabels,
+                compactLabels = audioSetupCompactLabels,
                 onSelect = { index -> hapticClick(); onAudioSetupSelect(index) }
             )
 
@@ -204,8 +206,15 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
 
         Text(
             text = stringResource(R.string.app_title),
-            color = colors.textPrimary,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Bold,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        colors.accentCyan,
+                        colors.accentMagenta
+                    )
+                )
+            ),
             fontSize = 17.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f)
@@ -328,26 +337,25 @@ private fun PrimaryActionButton(
 private fun AudioSetupDropdown(
     selectedIndex: Int,
     labels: List<String>,
+    compactLabels: List<String>,
     onSelect: (Int) -> Unit
 ) {
     val colors = MaterialTheme.microBlastColors
     var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = labels.getOrElse(selectedIndex) { labels.firstOrNull().orEmpty() }
+    val selectedLabel = compactLabels.getOrElse(selectedIndex) {
+        labels.getOrElse(selectedIndex) { labels.firstOrNull().orEmpty() }
+    }
 
     Column {
-        Text(
-            text = stringResource(R.string.audio_setup_label),
-            color = colors.textPrimary,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        SectionHeader(label = stringResource(R.string.audio_setup_label))
 
         Box(modifier = Modifier.fillMaxWidth()) {
             TextField(
                 value = selectedLabel,
                 onValueChange = {},
                 readOnly = true,
+                singleLine = true,
+                maxLines = 1,
                 trailingIcon = {
                     Icon(
                         imageVector = if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
@@ -394,6 +402,31 @@ private fun AudioSetupDropdown(
 }
 
 @Composable
+private fun SectionHeader(label: String) {
+    val colors = MaterialTheme.microBlastColors
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(bottom = 8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(17.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(colors.accentCyan)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = label,
+            color = colors.textPrimary.copy(alpha = 0.92f),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp
+        )
+    }
+}
+
+@Composable
 private fun LoudnessSection(
     progress: Int,
     onProgressChange: (Int) -> Unit
@@ -409,12 +442,7 @@ private fun LoudnessSection(
     )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = stringResource(R.string.loudness_label),
-            color = colors.textPrimary,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp
-        )
+        SectionHeader(label = stringResource(R.string.loudness_label))
 
         Box {
             IconButton(

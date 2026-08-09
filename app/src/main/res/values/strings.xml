@@ -34,4 +34,9 @@
         <item>@string/setup_bt_mic</item>
         <item>@string/setup_bt_speaker</item>
     </string-array>
+    <string-array name="audio_setup_compact_options">
+        <item>🎧 Wired mic → Phone speaker</item>
+        <item>🎧 Bluetooth mic → Phone speaker</item>
+        <item>🎤 Phone mic → Bluetooth speaker</item>
+    </string-array>
 </resources>

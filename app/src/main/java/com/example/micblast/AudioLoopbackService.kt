@@ -29,6 +29,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.math.roundToInt
 
 class AudioLoopbackService : Service() {
 
@@ -120,14 +121,17 @@ class AudioLoopbackService : Service() {
             ACTION_CHANGE_MODE -> {
                 val mode = intent.getStringExtra(EXTRA_MODE) ?: MODE_NORMAL
                 changeMode(mode)
+                updateNotification()
             }
             ACTION_SET_GAIN -> {
                 gain = intent.getFloatExtra(EXTRA_GAIN, 1f).coerceIn(1f, 2f)
                 Log.d(TAG, "Gain set to $gain")
+                updateNotification()
             }
             ACTION_SET_INTENSITY -> {
                 intensity = intent.getFloatExtra(EXTRA_INTENSITY, 0.5f).coerceIn(0f, 1f)
                 Log.d(TAG, "Intensity set to $intensity")
+                updateNotification()
             }
         }
         return START_STICKY
@@ -622,14 +626,45 @@ class AudioLoopbackService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val modeLabel = when (currentMode) {
+            MODE_CHIPMUNK -> "Chipmunk"
+            MODE_DEEP -> "Monster"
+            MODE_ROBOT -> "Robot"
+            else -> "Normal"
+        }
+
+        val setupLabel = when (audioSetup) {
+            SETUP_BT_MIC_TO_SPEAKER -> "Bluetooth mic → phone speaker"
+            SETUP_PHONE_MIC_TO_BT_SPEAKER -> "Phone mic → Bluetooth speaker"
+            else -> "Wired mic → phone speaker"
+        }
+
+        val gainLabel = "Boost %.1f×".format(gain)
+        val intensityLabel = if (currentMode == MODE_NORMAL) {
+            "Intensity: N/A"
+        } else {
+            "Intensity: ${(intensity * 100f).roundToInt()}%"
+        }
+
+        val summary = "$modeLabel • $gainLabel"
+        val details = "$setupLabel • $intensityLabel"
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Funny Karaoke Machine is live")
-            .setContentText("Playing through the speaker")
+            .setContentTitle(summary)
+            .setContentText(details)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$details\n$gainLabel • $modeLabel"))
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setOngoing(true)
             .setContentIntent(openAppPendingIntent)
             .addAction(android.R.drawable.ic_media_pause, "Stop", stopPendingIntent)
             .build()
+    }
+
+    private fun updateNotification() {
+        if (running || starting) {
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.notify(NOTIFICATION_ID, buildNotification())
+        }
     }
 
     private fun createNotificationChannel() {

@@ -181,6 +181,7 @@ class MainActivity : ComponentActivity() {
                         intensityProgress = intensityProgress,
                         audioSetupIndex = audioSetupIndex,
                         audioSetupLabels = stringArrayResource(R.array.audio_setup_options).toList(),
+                        audioSetupCompactLabels = stringArrayResource(R.array.audio_setup_compact_options).toList(),
                         isLocked = isLocked,
                         hapticsEnabled = hapticsEnabled,
                         onPlayClick = ::onPlayRequested,
