@@ -132,7 +132,7 @@ fun MainScreen(
         ) {
             TopBar(onMenuClick = onMenuClick, onLockClick = onLockClick)
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Box(
                 modifier = Modifier.fillMaxWidth(),
@@ -145,7 +145,7 @@ fun MainScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             AudioSetupDropdown(
                 selectedIndex = audioSetupIndex,
@@ -153,14 +153,14 @@ fun MainScreen(
                 onSelect = onAudioSetupSelect
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             LoudnessSection(
                 progress = gainProgress,
                 onProgressChange = onGainChange
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             ModeAndIntensityGroup(
                 currentMode = currentMode,
@@ -447,7 +447,7 @@ private fun ModeAndIntensityGroup(
     ) {
         Row(
             modifier = Modifier
-                .padding(14.dp)
+                .padding(10.dp)
                 .height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -500,14 +500,14 @@ private fun ModeButton(
                 indication = null,
                 onClick = onClick
             )
-            .padding(vertical = 16.dp),
+            .padding(vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             VoiceModeIcon(
                 modeId = mode.id,
                 tint = mode.color,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(34.dp)
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
