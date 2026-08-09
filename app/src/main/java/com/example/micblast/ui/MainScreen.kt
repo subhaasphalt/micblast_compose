@@ -1,10 +1,7 @@
 package com.example.micblast.ui
 
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -66,7 +63,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -246,18 +242,6 @@ private fun PrimaryActionButton(
         label = "primaryButtonAccent"
     )
 
-    val iconScale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isRunning) 1f else 0.92f,
-        animationSpec = tween(180),
-        label = "primaryButtonIconScale"
-    )
-
-    val iconRotation by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isRunning) 0f else -90f,
-        animationSpec = tween(220),
-        label = "primaryButtonIconRotation"
-    )
-
     Box(
         modifier = Modifier
             .size(96.dp)
@@ -274,18 +258,9 @@ private fun PrimaryActionButton(
             onClick = if (isRunning) onStopClick else onPlayClick,
             modifier = Modifier.size(72.dp)
         ) {
-            AnimatedContent(
+            Crossfade(
                 targetState = isRunning,
-                transitionSpec = {
-                    scaleIn(
-                        animationSpec = tween(180),
-                        initialScale = 0.65f
-                    ) togetherWith scaleOut(
-                        animationSpec = tween(120),
-                        targetScale = 0.65f
-                    )
-                },
-                contentAlignment = Alignment.Center,
+                animationSpec = tween(180),
                 label = "playStopIcon"
             ) { running ->
                 Icon(
@@ -300,13 +275,7 @@ private fun PrimaryActionButton(
                         "Play"
                     },
                     tint = accent,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .graphicsLayer {
-                            scaleX = iconScale
-                            scaleY = iconScale
-                            rotationZ = iconRotation
-                        }
+                    modifier = Modifier.size(38.dp)
                 )
             }
         }
