@@ -238,45 +238,92 @@ private fun PrimaryActionButton(
         } else {
             colors.accentCyan
         },
-        animationSpec = tween(220),
+        animationSpec = tween(260),
         label = "primaryButtonAccent"
     )
 
     Box(
-        modifier = Modifier
-            .size(96.dp)
-            .clip(CircleShape)
-            .background(colors.surface)
-            .border(
-                width = 2.5.dp,
-                color = accent,
-                shape = CircleShape
-            ),
+        modifier = Modifier.size(96.dp),
         contentAlignment = Alignment.Center
     ) {
-        IconButton(
-            onClick = if (isRunning) onStopClick else onPlayClick,
-            modifier = Modifier.size(72.dp)
-        ) {
-            Crossfade(
-                targetState = isRunning,
-                animationSpec = tween(180),
-                label = "playStopIcon"
-            ) { running ->
-                Icon(
-                    imageVector = if (running) {
-                        Icons.Filled.Stop
-                    } else {
-                        Icons.Filled.PlayArrow
-                    },
-                    contentDescription = if (running) {
-                        "Stop"
-                    } else {
-                        "Play"
-                    },
-                    tint = accent,
-                    modifier = Modifier.size(38.dp)
+        // Very subtle theme-colored halo. It adds depth in neon themes
+        // without forcing a neon appearance on the other themes.
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            accent.copy(alpha = 0.10f),
+                            accent.copy(alpha = 0.035f),
+                            Color.Transparent
+                        )
+                    )
                 )
+        )
+
+        // Main control surface.
+        Box(
+            modifier = Modifier
+                .size(92.dp)
+                .clip(CircleShape)
+                .background(colors.surface)
+                .border(
+                    width = 1.dp,
+                    color = colors.borderFaint,
+                    shape = CircleShape
+                )
+                .border(
+                    width = 1.25.dp,
+                    color = accent.copy(
+                        alpha = if (isRunning) 0.95f else 0.78f
+                    ),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Inner surface creates a restrained recessed-control effect.
+            Box(
+                modifier = Modifier
+                    .size(70.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                colors.surfaceChip,
+                                colors.surface
+                            )
+                        )
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = colors.borderFaint.copy(alpha = 0.55f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(
+                    onClick = if (isRunning) onStopClick else onPlayClick,
+                    modifier = Modifier.size(64.dp)
+                ) {
+                    Crossfade(
+                        targetState = isRunning,
+                        animationSpec = tween(180),
+                        label = "playStopIcon"
+                    ) { running ->
+                        Icon(
+                            imageVector = if (running) {
+                                Icons.Filled.Stop
+                            } else {
+                                Icons.Filled.PlayArrow
+                            },
+                            contentDescription = if (running) "Stop" else "Play",
+                            tint = accent,
+                            modifier = Modifier.size(34.dp)
+                        )
+                    }
+                }
             }
         }
     }
