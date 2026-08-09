@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import com.example.micblast.ui.ExitConfirmationDialog
 import com.example.micblast.ui.MainScreen
 import com.example.micblast.ui.SettingsScreen
+import com.example.micblast.ui.theme.AppTheme
 import com.example.micblast.ui.theme.MicBlastTheme
 
 class MainActivity : ComponentActivity() {
@@ -39,7 +40,7 @@ class MainActivity : ComponentActivity() {
     private var isLocked by mutableStateOf(false)
     private var showSettings by mutableStateOf(false)
     private var showExitConfirmation by mutableStateOf(false)
-    private var darkTheme by mutableStateOf(true)
+    private var appTheme by mutableStateOf(AppTheme.NEON_PARTY)
     private var autoRotate by mutableStateOf(true)
     private var hapticsEnabled by mutableStateOf(true)
 
@@ -134,7 +135,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        darkTheme = settingsPrefs.getBoolean(KEY_DARK_THEME, true)
+        // Migrate old dark_theme boolean if present, otherwise load new theme id.
+        val savedThemeId = settingsPrefs.getString(KEY_THEME, null)
+        appTheme = if (savedThemeId != null) {
+            AppTheme.fromId(savedThemeId)
+        } else {
+            // Fallback for users upgrading from the old dark/light toggle
+            val wasDark = settingsPrefs.getBoolean(KEY_DARK_THEME, true)
+            if (wasDark) AppTheme.NEON_PARTY else AppTheme.PASTEL
+        }
         autoRotate = settingsPrefs.getBoolean(KEY_AUTO_ROTATE, true)
         hapticsEnabled = settingsPrefs.getBoolean(KEY_HAPTICS, true)
         currentMode = settingsPrefs.getString(KEY_MODE, AudioLoopbackService.MODE_NORMAL)
@@ -146,7 +155,7 @@ class MainActivity : ComponentActivity() {
         setupOrientationLock()
 
         setContent {
-            MicBlastTheme(darkTheme = darkTheme) {
+            MicBlastTheme(appTheme = appTheme) {
                 BackHandler(enabled = isLocked) {
                     // Locked — swallow back press instead of exiting/navigating,
                     // same as the old onBackPressed() override.
@@ -165,8 +174,8 @@ class MainActivity : ComponentActivity() {
 
                 if (showSettings) {
                     SettingsScreen(
-                        darkTheme = darkTheme,
-                        onDarkThemeChange = ::onDarkThemeChanged,
+                        appTheme = appTheme,
+                        onThemeChange = ::onThemeChanged,
                         autoRotate = autoRotate,
                         onAutoRotateChange = ::onAutoRotateChanged,
                         hapticFeedback = hapticsEnabled,
@@ -210,9 +219,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun onDarkThemeChanged(enabled: Boolean) {
-        darkTheme = enabled
-        settingsPrefs.edit().putBoolean(KEY_DARK_THEME, enabled).apply()
+    private fun onThemeChanged(theme: AppTheme) {
+        appTheme = theme
+        settingsPrefs.edit()
+            .putString(KEY_THEME, theme.id)
+            .remove(KEY_DARK_THEME) // clean up legacy key
+            .apply()
     }
 
     private fun onAutoRotateChanged(enabled: Boolean) {
@@ -429,7 +441,8 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val PREFS_NAME = "micblast_settings"
-        const val KEY_DARK_THEME = "dark_theme"
+        const val KEY_THEME = "app_theme"
+        const val KEY_DARK_THEME = "dark_theme" // legacy, kept only for migration
         const val KEY_AUTO_ROTATE = "auto_rotate"
         const val KEY_HAPTICS = "haptics_enabled"
         const val KEY_MODE = "last_mode"

@@ -9,11 +9,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * All the colors MainScreen actually reaches for. Two instances exist —
- * NeonColors (dark) and LightColors — and MicBlastTheme picks between them
- * based on the darkTheme flag. Every composable downstream reads through
- * MaterialTheme.microBlastColors, so switching themes in Settings updates
- * the whole screen automatically.
+ * All the colors MainScreen actually reaches for. Every theme pack produces
+ * one of these. Composables read through MaterialTheme.microBlastColors so
+ * switching themes in Settings updates the whole UI automatically.
  */
 data class MicBlastColors(
     val bgTop: Color,
@@ -31,39 +29,7 @@ data class MicBlastColors(
     val textMuted: Color,
 )
 
-val NeonColors = MicBlastColors(
-    bgTop = NeonPalette.BgTop,
-    bgMid = NeonPalette.BgMid,
-    bgBottom = NeonPalette.BgBottom,
-    surface = NeonPalette.Surface,
-    surfaceChip = NeonPalette.SurfaceChip,
-    borderFaint = NeonPalette.BorderFaint,
-    accentCyan = NeonPalette.Cyan,
-    accentMagenta = NeonPalette.Magenta,
-    accentGreen = NeonPalette.Green,
-    accentPurple = NeonPalette.Purple,
-    textPrimary = NeonPalette.TextPrimary,
-    textSecondary = NeonPalette.TextSecondary,
-    textMuted = NeonPalette.TextMuted,
-)
-
-val LightColors = MicBlastColors(
-    bgTop = LightPalette.BgTop,
-    bgMid = LightPalette.BgMid,
-    bgBottom = LightPalette.BgBottom,
-    surface = LightPalette.Surface,
-    surfaceChip = LightPalette.SurfaceChip,
-    borderFaint = LightPalette.BorderFaint,
-    accentCyan = LightPalette.Cyan,
-    accentMagenta = LightPalette.Magenta,
-    accentGreen = LightPalette.Green,
-    accentPurple = LightPalette.Purple,
-    textPrimary = LightPalette.TextPrimary,
-    textSecondary = LightPalette.TextSecondary,
-    textMuted = LightPalette.TextMuted,
-)
-
-private val LocalMicBlastColors = staticCompositionLocalOf { NeonColors }
+private val LocalMicBlastColors = staticCompositionLocalOf { AppTheme.NEON_PARTY.toColors() }
 
 /**
  * Extension on MaterialTheme so call sites read `MaterialTheme.microBlastColors.accentCyan`,
@@ -75,13 +41,13 @@ val MaterialTheme.microBlastColors: MicBlastColors
 
 @Composable
 fun MicBlastTheme(
-    darkTheme: Boolean = true,
+    appTheme: AppTheme = AppTheme.NEON_PARTY,
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) NeonColors else LightColors
+    val colors = appTheme.toColors()
 
     CompositionLocalProvider(LocalMicBlastColors provides colors) {
-        val scheme = if (darkTheme) {
+        val scheme = if (appTheme.isDark) {
             darkColorScheme(
                 primary = colors.accentCyan,
                 secondary = colors.accentMagenta,
