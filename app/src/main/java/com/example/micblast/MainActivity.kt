@@ -24,7 +24,6 @@ import androidx.core.content.ContextCompat
 import com.example.micblast.ui.ExitConfirmationDialog
 import com.example.micblast.ui.MainScreen
 import com.example.micblast.ui.SettingsScreen
-import com.example.micblast.ui.theme.AccentTheme
 import com.example.micblast.ui.theme.MicBlastTheme
 
 class MainActivity : ComponentActivity() {
@@ -41,7 +40,6 @@ class MainActivity : ComponentActivity() {
     private var showSettings by mutableStateOf(false)
     private var showExitConfirmation by mutableStateOf(false)
     private var darkTheme by mutableStateOf(true)
-    private var accentTheme by mutableStateOf(AccentTheme.CLASSIC)
     private var autoRotate by mutableStateOf(true)
     private var hapticsEnabled by mutableStateOf(true)
 
@@ -137,10 +135,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         darkTheme = settingsPrefs.getBoolean(KEY_DARK_THEME, true)
-        // Prefer new accent key; fall back from any old full-theme id if present.
-        val savedAccent = settingsPrefs.getString(KEY_ACCENT_THEME, null)
-            ?: settingsPrefs.getString(KEY_THEME, null)
-        accentTheme = AccentTheme.fromId(savedAccent)
         autoRotate = settingsPrefs.getBoolean(KEY_AUTO_ROTATE, true)
         hapticsEnabled = settingsPrefs.getBoolean(KEY_HAPTICS, true)
         currentMode = settingsPrefs.getString(KEY_MODE, AudioLoopbackService.MODE_NORMAL)
@@ -152,7 +146,7 @@ class MainActivity : ComponentActivity() {
         setupOrientationLock()
 
         setContent {
-            MicBlastTheme(darkTheme = darkTheme, accentTheme = accentTheme) {
+            MicBlastTheme(darkTheme = darkTheme) {
                 BackHandler(enabled = isLocked) {
                     // Locked — swallow back press instead of exiting/navigating,
                     // same as the old onBackPressed() override.
@@ -173,8 +167,6 @@ class MainActivity : ComponentActivity() {
                     SettingsScreen(
                         darkTheme = darkTheme,
                         onDarkThemeChange = ::onDarkThemeChanged,
-                        accentTheme = accentTheme,
-                        onAccentThemeChange = ::onAccentThemeChanged,
                         autoRotate = autoRotate,
                         onAutoRotateChange = ::onAutoRotateChanged,
                         hapticFeedback = hapticsEnabled,
@@ -221,14 +213,6 @@ class MainActivity : ComponentActivity() {
     private fun onDarkThemeChanged(enabled: Boolean) {
         darkTheme = enabled
         settingsPrefs.edit().putBoolean(KEY_DARK_THEME, enabled).apply()
-    }
-
-    private fun onAccentThemeChanged(theme: AccentTheme) {
-        accentTheme = theme
-        settingsPrefs.edit()
-            .putString(KEY_ACCENT_THEME, theme.id)
-            .remove(KEY_THEME) // clean up previous full-theme key if present
-            .apply()
     }
 
     private fun onAutoRotateChanged(enabled: Boolean) {
@@ -446,8 +430,6 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val PREFS_NAME = "micblast_settings"
         const val KEY_DARK_THEME = "dark_theme"
-        const val KEY_ACCENT_THEME = "accent_theme"
-        const val KEY_THEME = "app_theme" // legacy from previous theme packs
         const val KEY_AUTO_ROTATE = "auto_rotate"
         const val KEY_HAPTICS = "haptics_enabled"
         const val KEY_MODE = "last_mode"
