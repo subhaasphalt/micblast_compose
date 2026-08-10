@@ -63,13 +63,104 @@ data class ThemeSpec(
 val AppThemes: List<ThemeSpec> = listOf(
     ThemeSpec(
         id = "theme1",
-        displayName = "Theme 1",
-        accentPrimary = Color(0xFF00E5FF),   // cyan
-        accentSecondary = Color(0xFFFF2D95), // magenta
-        mode1AccentColor = Color(0xFF00E5FF), // Normal   — mirrors primary
-        mode2AccentColor = Color(0xFFFF2D95), // Chipmunk — mirrors secondary
-        mode3AccentColor = Color(0xFF39FF14), // Monster  — fixed green
-        mode4AccentColor = Color(0xFFBF5AF2), // Robot    — fixed purple
+        displayName = "Neon Fusion",
+        accentPrimary = Color(0xFF00E5FF),
+        accentSecondary = Color(0xFFFF2D95),
+        mode1AccentColor = Color(0xFF00E5FF),
+        mode2AccentColor = Color(0xFFFF2D95),
+        mode3AccentColor = Color(0xFF39FF14),
+        mode4AccentColor = Color(0xFFBF5AF2),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 2. Inferno — Red
+    ThemeSpec(
+        id = "theme2",
+        displayName = "Inferno",
+        accentPrimary = Color(0xFFFF1744),
+        accentSecondary = Color(0xFFFF9100),
+        mode1AccentColor = Color(0xFFFF1744),
+        mode2AccentColor = Color(0xFFFF9100),
+        mode3AccentColor = Color(0xFFFFEA00),
+        mode4AccentColor = Color(0xFFFF4081),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 3. Cyberpunk — Orange
+    ThemeSpec(
+        id = "theme3",
+        displayName = "Cyberpunk",
+        accentPrimary = Color(0xFFFF6D00),
+        accentSecondary = Color(0xFFD500F9),
+        mode1AccentColor = Color(0xFFFF6D00),
+        mode2AccentColor = Color(0xFFD500F9),
+        mode3AccentColor = Color(0xFF00E5FF),
+        mode4AccentColor = Color(0xFFFF2D95),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 4. Toxic — Yellow/Green
+    ThemeSpec(
+        id = "theme4",
+        displayName = "Toxic",
+        accentPrimary = Color(0xFFB6FF00),
+        accentSecondary = Color(0xFF00FF66),
+        mode1AccentColor = Color(0xFFB6FF00),
+        mode2AccentColor = Color(0xFF00FF66),
+        mode3AccentColor = Color(0xFFFFFF00),
+        mode4AccentColor = Color(0xFF00E5FF),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 5. Oceanic — Green/Blue
+    ThemeSpec(
+        id = "theme5",
+        displayName = "Oceanic",
+        accentPrimary = Color(0xFF00D4A8),
+        accentSecondary = Color(0xFF00A8FF),
+        mode1AccentColor = Color(0xFF00D4A8),
+        mode2AccentColor = Color(0xFF00A8FF),
+        mode3AccentColor = Color(0xFF76FF03),
+        mode4AccentColor = Color(0xFF536DFE),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 6. Aurora — Blue/Indigo
+    ThemeSpec(
+        id = "theme6",
+        displayName = "Aurora",
+        accentPrimary = Color(0xFF00B8D4),
+        accentSecondary = Color(0xFF7C4DFF),
+        mode1AccentColor = Color(0xFF00B8D4),
+        mode2AccentColor = Color(0xFF7C4DFF),
+        mode3AccentColor = Color(0xFF00E676),
+        mode4AccentColor = Color(0xFFE040FB),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 7. Synthwave — Indigo/Violet
+    ThemeSpec(
+        id = "theme7",
+        displayName = "Synthwave",
+        accentPrimary = Color(0xFFFF00A8),
+        accentSecondary = Color(0xFF7B2FFF),
+        mode1AccentColor = Color(0xFFFF00A8),
+        mode2AccentColor = Color(0xFF7B2FFF),
+        mode3AccentColor = Color(0xFF00F0FF),
+        mode4AccentColor = Color(0xFFFF6EC7),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 8. Royal — Violet
+    ThemeSpec(
+        id = "theme8",
+        displayName = "Royal",
+        accentPrimary = Color(0xFF9C27FF),
+        accentSecondary = Color(0xFFFFC107),
+        mode1AccentColor = Color(0xFF9C27FF),
+        mode2AccentColor = Color(0xFFFFC107),
+        mode3AccentColor = Color(0xFF00E5FF),
+        mode4AccentColor = Color(0xFFFF4081),
         allowLightDark = ThemeModeSupport.BOTH,
     ),
 )
