@@ -1,10 +1,12 @@
 package com.example.micblast.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,8 +17,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -34,7 +38,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,6 +77,10 @@ fun SettingsScreen(
                     colors = listOf(colors.bgTop, colors.bgMid, colors.bgBottom)
                 )
             )
+            // The theme grid can grow to any length (one row per 2 themes),
+            // and the toggle cards still need to be reachable below it —
+            // without this the screen just clips once themes overflow.
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         Row(
@@ -110,7 +121,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        ThemePickerCard(
+        ThemePickerSection(
             themes = themes,
             selectedThemeId = selectedThemeId,
             onThemeSelected = { hapticClick(); onThemeSelected(it) },
@@ -154,119 +165,192 @@ fun SettingsScreen(
             checked = hapticFeedback,
             onCheckedChange = { hapticClick(); onHapticFeedbackChange(it) },
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 /**
- * Lists every theme in [themes] (see AppThemes — add an entry there and it
- * shows up here automatically) as a selectable row with a little swatch
- * previewing its primary/secondary pair.
+ * Lays out every theme in [themes] (see AppThemes — add an entry there and
+ * it shows up here automatically) as a 2-per-row grid of [ThemeTile]s, so
+ * the list stays compact as more themes get added instead of growing one
+ * full-width row per theme.
  */
 @Composable
-private fun ThemePickerCard(
+private fun ThemePickerSection(
     themes: List<ThemeSpec>,
     selectedThemeId: String,
     onThemeSelected: (String) -> Unit,
 ) {
     val colors = MaterialTheme.microBlastColors
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = colors.surface),
-        border = BorderStroke(1.dp, colors.borderFaint),
-        shape = RoundedCornerShape(18.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = stringResource(R.string.theme_label),
-                color = colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp
-            )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.theme_label),
+            color = colors.textPrimary,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp
+        )
 
-            Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-            themes.forEachIndexed { index, theme ->
-                ThemeRow(
-                    theme = theme,
-                    selected = theme.id == selectedThemeId,
-                    onClick = { onThemeSelected(theme.id) },
-                )
-                if (index != themes.lastIndex) {
-                    Spacer(modifier = Modifier.height(10.dp))
+        themes.chunked(2).forEach { rowThemes ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                rowThemes.forEach { theme ->
+                    ThemeTile(
+                        theme = theme,
+                        selected = theme.id == selectedThemeId,
+                        onClick = { onThemeSelected(theme.id) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                // Odd theme count: keep the last tile at half width instead
+                // of stretching it across the full row.
+                if (rowThemes.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
+            Spacer(modifier = Modifier.height(10.dp))
         }
     }
 }
 
+/**
+ * One theme's preview tile: primary/secondary swatches + name + mode-support
+ * label up top, a dashed divider, then the 4 mode-button colors below.
+ * Bordered in a gradient of the theme's own primary→secondary, regardless
+ * of whether it's selected, so every tile previews its own identity at a
+ * glance — selection is shown with a small checkmark badge instead.
+ */
 @Composable
-private fun ThemeRow(
+private fun ThemeTile(
     theme: ThemeSpec,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.microBlastColors
+    val shape = RoundedCornerShape(16.dp)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) colors.accentPrimary.copy(alpha = 0.12f) else colors.surfaceChip)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(colors.surfaceChip)
             .border(
-                1.dp,
-                if (selected) colors.accentPrimary.copy(alpha = 0.55f) else colors.borderFaint,
-                RoundedCornerShape(12.dp)
+                width = if (selected) 2.5.dp else 1.5.dp,
+                brush = Brush.linearGradient(listOf(theme.accentPrimary, theme.accentSecondary)),
+                shape = shape,
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
             )
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(12.dp)
     ) {
-        Row {
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .background(theme.accentPrimary)
-            )
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .background(theme.accentSecondary)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = theme.displayName,
-                color = colors.textPrimary,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp
-            )
-            if (theme.allowLightDark != ThemeModeSupport.BOTH) {
-                Text(
-                    text = if (theme.allowLightDark == ThemeModeSupport.DARK_ONLY) "Dark only" else "Light only",
-                    color = colors.textMuted,
-                    fontSize = 11.sp
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(theme.accentPrimary)
                 )
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(theme.accentSecondary)
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column {
+                    Text(
+                        text = theme.displayName,
+                        color = colors.textPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = when (theme.allowLightDark) {
+                            ThemeModeSupport.BOTH -> "Both"
+                            ThemeModeSupport.DARK_ONLY -> "Dark"
+                            ThemeModeSupport.LIGHT_ONLY -> "Light"
+                        },
+                        color = colors.textMuted,
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            DashedDivider(color = colors.borderFaint)
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                listOf(
+                    theme.mode1AccentColor,
+                    theme.mode2AccentColor,
+                    theme.mode3AccentColor,
+                    theme.mode4AccentColor,
+                ).forEach { modeColor ->
+                    Box(
+                        modifier = Modifier
+                            .size(13.dp)
+                            .clip(CircleShape)
+                            .background(modeColor)
+                    )
+                }
             }
         }
 
         if (selected) {
-            Icon(
-                imageVector = Icons.Filled.Check,
-                contentDescription = null,
-                tint = colors.accentPrimary,
-                modifier = Modifier.size(20.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(colors.surface)
+                    .border(1.dp, theme.accentPrimary, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = theme.accentPrimary,
+                    modifier = Modifier.size(11.dp)
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun DashedDivider(color: Color, modifier: Modifier = Modifier) {
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(1.dp)
+    ) {
+        drawLine(
+            color = color,
+            start = Offset(0f, size.height / 2f),
+            end = Offset(size.width, size.height / 2f),
+            strokeWidth = size.height,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f), 0f)
+        )
     }
 }
 
