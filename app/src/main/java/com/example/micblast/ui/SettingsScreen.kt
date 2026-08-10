@@ -277,29 +277,37 @@ private fun ThemeTile(
                         fontSize = 13.sp,
                         maxLines = 1,
                     )
-                    Text(
-                        text = when (theme.allowLightDark) {
-                            ThemeModeSupport.BOTH -> "Both"
-                            ThemeModeSupport.DARK_ONLY -> "Dark"
-                            ThemeModeSupport.LIGHT_ONLY -> "Light"
-                        },
-                        color = colors.textMuted,
-                        fontSize = 10.sp,
-                        maxLines = 1,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = when (theme.allowLightDark) {
+                                ThemeModeSupport.BOTH -> "Both"
+                                ThemeModeSupport.DARK_ONLY -> "Dark"
+                                ThemeModeSupport.LIGHT_ONLY -> "Light"
+                            },
+                            color = colors.textMuted,
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                        )
+                        if (selected) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = theme.accentPrimary,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             DashedDivider(color = colors.borderFaint)
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 listOf(
                     theme.mode1AccentColor,
                     theme.mode2AccentColor,
@@ -308,30 +316,11 @@ private fun ThemeTile(
                 ).forEach { modeColor ->
                     Box(
                         modifier = Modifier
-                            .size(13.dp)
+                            .size(14.dp)
                             .clip(CircleShape)
                             .background(modeColor)
                     )
                 }
-            }
-        }
-
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(colors.surface)
-                    .border(1.dp, theme.accentPrimary, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = theme.accentPrimary,
-                    modifier = Modifier.size(11.dp)
-                )
             }
         }
     }
