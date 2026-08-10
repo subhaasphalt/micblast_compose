@@ -275,6 +275,7 @@ private fun ThemeTile(
                         color = colors.textPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
+                        lineHeight = 14.sp,
                         maxLines = 1,
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -286,6 +287,7 @@ private fun ThemeTile(
                             },
                             color = colors.textMuted,
                             fontSize = 10.sp,
+                            lineHeight = 11.sp,
                             maxLines = 1,
                         )
                         if (selected) {
@@ -307,7 +309,10 @@ private fun ThemeTile(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 listOf(
                     theme.mode1AccentColor,
                     theme.mode2AccentColor,
@@ -316,7 +321,7 @@ private fun ThemeTile(
                 ).forEach { modeColor ->
                     Box(
                         modifier = Modifier
-                            .size(14.dp)
+                            .size(26.dp)
                             .clip(CircleShape)
                             .background(modeColor)
                     )
