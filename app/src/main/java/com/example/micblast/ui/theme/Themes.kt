@@ -64,96 +64,12 @@ val AppThemes: List<ThemeSpec> = listOf(
     ThemeSpec(
         id = "theme1",
         displayName = "Theme 1",
-        accentPrimary = Color(0xFF00E5FF),
-        accentSecondary = Color(0xFFFF2D95),
-        mode1AccentColor = Color(0xFF00E5FF),
-        mode2AccentColor = Color(0xFFFF2D95),
-        mode3AccentColor = Color(0xFF39FF14),
-        mode4AccentColor = Color(0xFFBF5AF2),
-        allowLightDark = ThemeModeSupport.BOTH,
-    ),
-
-    ThemeSpec(
-        id = "theme2",
-        displayName = "Red",
-        accentPrimary = Color(0xFFFF1744),
-        accentSecondary = Color(0xFFFF5252),
-        mode1AccentColor = Color(0xFFFF1744),
-        mode2AccentColor = Color(0xFFFF5252),
-        mode3AccentColor = Color(0xFF39FF14),
-        mode4AccentColor = Color(0xFFBF5AF2),
-        allowLightDark = ThemeModeSupport.BOTH,
-    ),
-
-    ThemeSpec(
-        id = "theme3",
-        displayName = "Orange",
-        accentPrimary = Color(0xFFFF6D00),
-        accentSecondary = Color(0xFFFFAB00),
-        mode1AccentColor = Color(0xFFFF6D00),
-        mode2AccentColor = Color(0xFFFFAB00),
-        mode3AccentColor = Color(0xFF39FF14),
-        mode4AccentColor = Color(0xFFBF5AF2),
-        allowLightDark = ThemeModeSupport.BOTH,
-    ),
-
-    ThemeSpec(
-        id = "theme4",
-        displayName = "Yellow",
-        accentPrimary = Color(0xFFFFD600),
-        accentSecondary = Color(0xFFFFFF00),
-        mode1AccentColor = Color(0xFFFFD600),
-        mode2AccentColor = Color(0xFFFFFF00),
-        mode3AccentColor = Color(0xFF39FF14),
-        mode4AccentColor = Color(0xFFBF5AF2),
-        allowLightDark = ThemeModeSupport.BOTH,
-    ),
-
-    ThemeSpec(
-        id = "theme5",
-        displayName = "Green",
-        accentPrimary = Color(0xFF00C853),
-        accentSecondary = Color(0xFF69F0AE),
-        mode1AccentColor = Color(0xFF00C853),
-        mode2AccentColor = Color(0xFF69F0AE),
-        mode3AccentColor = Color(0xFF39FF14),
-        mode4AccentColor = Color(0xFFBF5AF2),
-        allowLightDark = ThemeModeSupport.BOTH,
-    ),
-
-    ThemeSpec(
-        id = "theme6",
-        displayName = "Blue",
-        accentPrimary = Color(0xFF2979FF),
-        accentSecondary = Color(0xFF448AFF),
-        mode1AccentColor = Color(0xFF2979FF),
-        mode2AccentColor = Color(0xFF448AFF),
-        mode3AccentColor = Color(0xFF39FF14),
-        mode4AccentColor = Color(0xFFBF5AF2),
-        allowLightDark = ThemeModeSupport.BOTH,
-    ),
-
-    ThemeSpec(
-        id = "theme7",
-        displayName = "Indigo",
-        accentPrimary = Color(0xFF3D5AFE),
-        accentSecondary = Color(0xFF536DFE),
-        mode1AccentColor = Color(0xFF3D5AFE),
-        mode2AccentColor = Color(0xFF536DFE),
-        mode3AccentColor = Color(0xFF39FF14),
-        mode4AccentColor = Color(0xFFBF5AF2),
-        allowLightDark = ThemeModeSupport.BOTH,
-    ),
-
-    ThemeSpec(
-        id = "theme8",
-        displayName = "Violet",
-        accentPrimary = Color(0xFFAA00FF),
-        accentSecondary = Color(0xFFD500F9),
-        mode1AccentColor = Color(0xFFAA00FF),
-        mode2AccentColor = Color(0xFFD500F9),
-        mode3AccentColor = Color(0xFF39FF14),
-        mode4AccentColor = Color(0xFFBF5AF2),
+        accentPrimary = Color(0xFF00E5FF),   // cyan
+        accentSecondary = Color(0xFFFF2D95), // magenta
+        mode1AccentColor = Color(0xFF00E5FF), // Normal   — mirrors primary
+        mode2AccentColor = Color(0xFFFF2D95), // Chipmunk — mirrors secondary
+        mode3AccentColor = Color(0xFF39FF14), // Monster  — fixed green
+        mode4AccentColor = Color(0xFFBF5AF2), // Robot    — fixed purple
         allowLightDark = ThemeModeSupport.BOTH,
     ),
 )

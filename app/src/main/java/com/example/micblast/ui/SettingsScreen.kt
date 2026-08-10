@@ -249,7 +249,7 @@ private fun ThemeTile(
                 indication = null,
                 onClick = onClick,
             )
-            .padding(12.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Column {
             // Both rows below split the tile into the same 4 equal-width
@@ -322,11 +322,11 @@ private fun ThemeTile(
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             DashedDivider(color = colors.borderFaint)
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
                 listOf(
@@ -341,7 +341,7 @@ private fun ThemeTile(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(26.dp)
+                                .size(14.dp)
                                 .clip(CircleShape)
                                 .background(modeColor)
                         )
