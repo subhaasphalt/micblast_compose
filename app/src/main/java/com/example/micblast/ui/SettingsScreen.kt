@@ -252,52 +252,71 @@ private fun ThemeTile(
             .padding(12.dp)
     ) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Both rows below split the tile into the same 4 equal-width
+            // columns. Column 1 and column 2 each center one accent circle
+            // up top and one mode circle below, so their centers line up
+            // by construction — no manual offset math to keep in sync.
+            // Columns 3+4 merge into one span for the text block, giving it
+            // the combined width (and therefore the same visual weight) of
+            // mode circles 3 and 4 below it.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(theme.accentPrimary)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(theme.accentSecondary)
-                )
-
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Column {
-                    Text(
-                        text = theme.displayName,
-                        color = colors.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp,
-                        lineHeight = 14.sp,
-                        maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(theme.accentPrimary)
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                }
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(theme.accentSecondary)
+                    )
+                }
+
+                Box(modifier = Modifier.weight(2f)) {
+                    Column {
                         Text(
-                            text = when (theme.allowLightDark) {
-                                ThemeModeSupport.BOTH -> "Both"
-                                ThemeModeSupport.DARK_ONLY -> "Dark"
-                                ThemeModeSupport.LIGHT_ONLY -> "Light"
-                            },
-                            color = colors.textMuted,
-                            fontSize = 10.sp,
-                            lineHeight = 11.sp,
+                            text = theme.displayName,
+                            color = colors.textPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            lineHeight = 14.sp,
                             maxLines = 1,
                         )
-                        if (selected) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = null,
-                                tint = theme.accentPrimary,
-                                modifier = Modifier.size(12.dp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = when (theme.allowLightDark) {
+                                    ThemeModeSupport.BOTH -> "Both"
+                                    ThemeModeSupport.DARK_ONLY -> "Dark"
+                                    ThemeModeSupport.LIGHT_ONLY -> "Light"
+                                },
+                                color = colors.textMuted,
+                                fontSize = 10.sp,
+                                lineHeight = 11.sp,
+                                maxLines = 1,
                             )
+                            if (selected) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = theme.accentPrimary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -309,10 +328,7 @@ private fun ThemeTile(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Row(modifier = Modifier.fillMaxWidth()) {
                 listOf(
                     theme.mode1AccentColor,
                     theme.mode2AccentColor,
@@ -320,11 +336,16 @@ private fun ThemeTile(
                     theme.mode4AccentColor,
                 ).forEach { modeColor ->
                     Box(
-                        modifier = Modifier
-                            .size(26.dp)
-                            .clip(CircleShape)
-                            .background(modeColor)
-                    )
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(modeColor)
+                        )
+                    }
                 }
             }
         }
