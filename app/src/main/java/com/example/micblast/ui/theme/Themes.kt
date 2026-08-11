@@ -61,11 +61,13 @@ data class ThemeSpec(
  * wiring required.
  */
 val AppThemes: List<ThemeSpec> = listOf(
+
+    // 1. Neon — high contrast / colorful gradient
     ThemeSpec(
-        id = "theme1",
-        displayName = "Neon Fusion",
-        accentPrimary = Color(0xFF00E5FF),
-        accentSecondary = Color(0xFFFF2D95),
+        id = "neon",
+        displayName = "Neon",
+        accentPrimary = Color(0xFF00E5FF),      // Cyan
+        accentSecondary = Color(0xFFFF2D95),    // Magenta
         mode1AccentColor = Color(0xFF00E5FF),
         mode2AccentColor = Color(0xFFFF2D95),
         mode3AccentColor = Color(0xFF39FF14),
@@ -73,94 +75,146 @@ val AppThemes: List<ThemeSpec> = listOf(
         allowLightDark = ThemeModeSupport.BOTH,
     ),
 
-    // 2. Inferno — Red
+    // 2. Ocean — analogous
     ThemeSpec(
-        id = "theme2",
-        displayName = "Inferno",
-        accentPrimary = Color(0xFFFF1744),
-        accentSecondary = Color(0xFFFF9100),
-        mode1AccentColor = Color(0xFFFF1744),
-        mode2AccentColor = Color(0xFFFF9100),
-        mode3AccentColor = Color(0xFFFFEA00),
-        mode4AccentColor = Color(0xFFFF4081),
+        id = "ocean",
+        displayName = "Ocean",
+        accentPrimary = Color(0xFF0077B6),      // Deep blue
+        accentSecondary = Color(0xFF00B4D8),    // Teal
+        mode1AccentColor = Color(0xFF0077B6),
+        mode2AccentColor = Color(0xFF00B4D8),
+        mode3AccentColor = Color(0xFF48CAE4),
+        mode4AccentColor = Color(0xFF4361EE),
         allowLightDark = ThemeModeSupport.BOTH,
     ),
 
-    // 3. Cyberpunk — Orange
+    // 3. Forest — analogous / natural
     ThemeSpec(
-        id = "theme3",
+        id = "forest",
+        displayName = "Forest",
+        accentPrimary = Color(0xFF008F5A),      // Emerald
+        accentSecondary = Color(0xFF8BC34A),    // Lime
+        mode1AccentColor = Color(0xFF008F5A),
+        mode2AccentColor = Color(0xFF8BC34A),
+        mode3AccentColor = Color(0xFF20C997),
+        mode4AccentColor = Color(0xFFFFB703),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 4. Sunset — warm analogous
+    ThemeSpec(
+        id = "sunset",
+        displayName = "Sunset",
+        accentPrimary = Color(0xFFFF6B35),      // Orange
+        accentSecondary = Color(0xFFFF3B5C),    // Coral/red
+        mode1AccentColor = Color(0xFFFF6B35),
+        mode2AccentColor = Color(0xFFFF3B5C),
+        mode3AccentColor = Color(0xFFFFC107),
+        mode4AccentColor = Color(0xFFFF7EB6),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 5. Royal — complementary / luxurious
+    ThemeSpec(
+        id = "royal",
+        displayName = "Royal",
+        accentPrimary = Color(0xFF8A2BE2),      // Violet
+        accentSecondary = Color(0xFFFFC107),    // Gold
+        mode1AccentColor = Color(0xFF8A2BE2),
+        mode2AccentColor = Color(0xFFFFC107),
+        mode3AccentColor = Color(0xFF4169E1),
+        mode4AccentColor = Color(0xFFFF4F81),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 6. Berry — shades / rich colors
+    ThemeSpec(
+        id = "berry",
+        displayName = "Berry",
+        accentPrimary = Color(0xFFD81B60),      // Raspberry
+        accentSecondary = Color(0xFF6A1B9A),    // Plum
+        mode1AccentColor = Color(0xFFD81B60),
+        mode2AccentColor = Color(0xFF6A1B9A),
+        mode3AccentColor = Color(0xFFE91E63),
+        mode4AccentColor = Color(0xFF9C27B0),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 7. Monochrome — monochromatic / black & shades
+    ThemeSpec(
+        id = "monochrome",
+        displayName = "Monochrome",
+        accentPrimary = Color(0xFF212121),      // Black
+        accentSecondary = Color(0xFF9E9E9E),    // Silver
+        mode1AccentColor = Color(0xFF424242),
+        mode2AccentColor = Color(0xFF757575),
+        mode3AccentColor = Color(0xFFBDBDBD),
+        mode4AccentColor = Color(0xFFE0E0E0),
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 8. Pastel — muted / soft
+    ThemeSpec(
+        id = "pastel",
+        displayName = "Pastel",
+        accentPrimary = Color(0xFFB39DDB),      // Lavender
+        accentSecondary = Color(0xFFFFAB91),    // Peach
+        mode1AccentColor = Color(0xFF80CBC4),   // Mint
+        mode2AccentColor = Color(0xFF90CAF9),   // Soft blue
+        mode3AccentColor = Color(0xFFF48FB1),   // Pink
+        mode4AccentColor = Color(0xFFFFE082),   // Yellow
+        allowLightDark = ThemeModeSupport.BOTH,
+    ),
+
+    // 9. Cyberpunk — split complementary / high contrast
+    ThemeSpec(
+        id = "cyberpunk",
         displayName = "Cyberpunk",
-        accentPrimary = Color(0xFFFF6D00),
-        accentSecondary = Color(0xFFD500F9),
-        mode1AccentColor = Color(0xFFFF6D00),
-        mode2AccentColor = Color(0xFFD500F9),
+        accentPrimary = Color(0xFFB000FF),      // Electric purple
+        accentSecondary = Color(0xFFFF6D00),    // Orange
+        mode1AccentColor = Color(0xFFB000FF),
+        mode2AccentColor = Color(0xFFFF6D00),
         mode3AccentColor = Color(0xFF00E5FF),
         mode4AccentColor = Color(0xFFFF2D95),
-        allowLightDark = ThemeModeSupport.BOTH,
+        allowLightDark = ThemeModeSupport.DARK_ONLY,
     ),
 
-    // 4. Toxic — Yellow/Green
+    // 10. Aurora — colorful gradient / atmospheric
     ThemeSpec(
-        id = "theme4",
-        displayName = "Toxic",
-        accentPrimary = Color(0xFFB6FF00),
-        accentSecondary = Color(0xFF00FF66),
-        mode1AccentColor = Color(0xFFB6FF00),
-        mode2AccentColor = Color(0xFF00FF66),
-        mode3AccentColor = Color(0xFFFFFF00),
-        mode4AccentColor = Color(0xFF00E5FF),
-        allowLightDark = ThemeModeSupport.BOTH,
-    ),
-
-    // 5. Oceanic — Green/Blue
-    ThemeSpec(
-        id = "theme5",
-        displayName = "Oceanic",
-        accentPrimary = Color(0xFF00D4A8),
-        accentSecondary = Color(0xFF00A8FF),
-        mode1AccentColor = Color(0xFF00D4A8),
-        mode2AccentColor = Color(0xFF00A8FF),
-        mode3AccentColor = Color(0xFF76FF03),
-        mode4AccentColor = Color(0xFF536DFE),
-        allowLightDark = ThemeModeSupport.BOTH,
-    ),
-
-    // 6. Aurora — Blue/Indigo
-    ThemeSpec(
-        id = "theme6",
+        id = "aurora",
         displayName = "Aurora",
-        accentPrimary = Color(0xFF00B8D4),
-        accentSecondary = Color(0xFF7C4DFF),
-        mode1AccentColor = Color(0xFF00B8D4),
+        accentPrimary = Color(0xFF00B8D4),      // Teal
+        accentSecondary = Color(0xFF7C4DFF),    // Violet
+        mode1AccentColor = Color(0xFF00BCD4),
         mode2AccentColor = Color(0xFF7C4DFF),
         mode3AccentColor = Color(0xFF00E676),
         mode4AccentColor = Color(0xFFE040FB),
         allowLightDark = ThemeModeSupport.BOTH,
     ),
 
-    // 7. Synthwave — Indigo/Violet
+    // 11. Citrus — bright / playful
     ThemeSpec(
-        id = "theme7",
-        displayName = "Synthwave",
-        accentPrimary = Color(0xFFFF00A8),
-        accentSecondary = Color(0xFF7B2FFF),
-        mode1AccentColor = Color(0xFFFF00A8),
-        mode2AccentColor = Color(0xFF7B2FFF),
-        mode3AccentColor = Color(0xFF00F0FF),
-        mode4AccentColor = Color(0xFFFF6EC7),
-        allowLightDark = ThemeModeSupport.BOTH,
+        id = "citrus",
+        displayName = "Citrus",
+        accentPrimary = Color(0xFFFFC107),      // Lemon
+        accentSecondary = Color(0xFFFF6D00),    // Orange
+        mode1AccentColor = Color(0xFFFFC107),
+        mode2AccentColor = Color(0xFFFF6D00),
+        mode3AccentColor = Color(0xFF8BC34A),
+        mode4AccentColor = Color(0xFFFF5252),
+        allowLightDark = ThemeModeSupport.LIGHT_ONLY,
     ),
 
-    // 8. Royal — Violet
+    // 12. High Contrast — complementary
     ThemeSpec(
-        id = "theme8",
-        displayName = "Royal",
-        accentPrimary = Color(0xFF9C27FF),
-        accentSecondary = Color(0xFFFFC107),
-        mode1AccentColor = Color(0xFF9C27FF),
-        mode2AccentColor = Color(0xFFFFC107),
-        mode3AccentColor = Color(0xFF00E5FF),
-        mode4AccentColor = Color(0xFFFF4081),
+        id = "high_contrast",
+        displayName = "High Contrast",
+        accentPrimary = Color(0xFFFF1744),      // Red
+        accentSecondary = Color(0xFF00B8D4),    // Cyan
+        mode1AccentColor = Color(0xFFFF1744),
+        mode2AccentColor = Color(0xFF00B8D4),
+        mode3AccentColor = Color(0xFFFFD600),
+        mode4AccentColor = Color(0xFF00C853),
         allowLightDark = ThemeModeSupport.BOTH,
     ),
 )

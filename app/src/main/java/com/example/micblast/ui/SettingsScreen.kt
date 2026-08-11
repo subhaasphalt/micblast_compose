@@ -1,7 +1,6 @@
 package com.example.micblast.ui
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,10 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -218,12 +216,16 @@ private fun ThemePickerSection(
     }
 }
 
+/** Small solid green used only for the "this theme is active" badge. */
+private val ActiveIndicatorGreen = Color(0xFF34C759)
+
 /**
- * One theme's preview tile: primary/secondary swatches + name + mode-support
- * label up top, a dashed divider, then the 4 mode-button colors below.
- * Bordered in a gradient of the theme's own primary→secondary, regardless
- * of whether it's selected, so every tile previews its own identity at a
- * glance — selection is shown with a small checkmark badge instead.
+ * One theme's preview tile, kept deliberately minimal: a left accent bar in
+ * the theme's main color, the 4 voice-mode button colors as circles, the
+ * theme name with its supported modes in a smaller/muted caption below it,
+ * and — only when this theme is the active one — a small green tick badge
+ * in the top-right corner. No borders or pills competing for attention;
+ * the accent bar and mode circles ARE the preview.
  */
 @Composable
 private fun ThemeTile(
@@ -240,8 +242,8 @@ private fun ThemeTile(
             .clip(shape)
             .background(colors.surfaceChip)
             .border(
-                width = if (selected) 2.5.dp else 1.5.dp,
-                brush = Brush.linearGradient(listOf(theme.accentPrimary, theme.accentSecondary)),
+                width = if (selected) 1.5.dp else 1.dp,
+                color = if (selected) theme.accentPrimary.copy(alpha = 0.55f) else colors.borderFaint,
                 shape = shape,
             )
             .clickable(
@@ -249,99 +251,58 @@ private fun ThemeTile(
                 indication = null,
                 onClick = onClick,
             )
-            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        Column {
-            // Both rows below split the tile into the same 4 equal-width
-            // columns. Column 1 and column 2 each center one accent circle
-            // up top and one mode circle below, so their centers line up
-            // by construction — no manual offset math to keep in sync.
-            // Columns 3+4 merge into one span for the text block, giving it
-            // the combined width (and therefore the same visual weight) of
-            // mode circles 3 and 4 below it.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+        Row(modifier = Modifier.fillMaxWidth()) {
+            // Left accent bar: the theme's main color, full tile height.
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(4.dp)
+                    .background(theme.accentPrimary)
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
             ) {
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
+                Text(
+                    text = theme.displayName,
+                    color = colors.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    lineHeight = 17.sp,
+                    maxLines = 1,
+                )
+                Spacer(modifier = Modifier.height(1.dp))
+                Text(
+                    text = when (theme.allowLightDark) {
+                        ThemeModeSupport.BOTH -> "Light & Dark"
+                        ThemeModeSupport.DARK_ONLY -> "Dark only"
+                        ThemeModeSupport.LIGHT_ONLY -> "Light only"
+                    },
+                    color = colors.textMuted,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 11.sp,
+                    lineHeight = 12.sp,
+                    maxLines = 1,
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(theme.accentPrimary)
-                    )
-                }
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(theme.accentSecondary)
-                    )
-                }
-
-                Box(modifier = Modifier.weight(2f)) {
-                    Column {
-                        Text(
-                            text = theme.displayName,
-                            color = colors.textPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp,
-                            lineHeight = 14.sp,
-                            maxLines = 1,
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = when (theme.allowLightDark) {
-                                    ThemeModeSupport.BOTH -> "Both"
-                                    ThemeModeSupport.DARK_ONLY -> "Dark"
-                                    ThemeModeSupport.LIGHT_ONLY -> "Light"
-                                },
-                                color = colors.textMuted,
-                                fontSize = 10.sp,
-                                lineHeight = 11.sp,
-                                maxLines = 1,
-                            )
-                            if (selected) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = null,
-                                    tint = theme.accentPrimary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            DashedDivider(color = colors.borderFaint)
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                listOf(
-                    theme.mode1AccentColor,
-                    theme.mode2AccentColor,
-                    theme.mode3AccentColor,
-                    theme.mode4AccentColor,
-                ).forEach { modeColor ->
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    listOf(
+                        theme.mode1AccentColor,
+                        theme.mode2AccentColor,
+                        theme.mode3AccentColor,
+                        theme.mode4AccentColor,
+                    ).forEach { modeColor ->
                         Box(
                             modifier = Modifier
-                                .size(14.dp)
+                                .size(18.dp)
                                 .clip(CircleShape)
                                 .background(modeColor)
                         )
@@ -349,23 +310,26 @@ private fun ThemeTile(
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun DashedDivider(color: Color, modifier: Modifier = Modifier) {
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(1.dp)
-    ) {
-        drawLine(
-            color = color,
-            start = Offset(0f, size.height / 2f),
-            end = Offset(size.width, size.height / 2f),
-            strokeWidth = size.height,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f), 0f)
-        )
+        // Active-theme badge: small green tick, top-right corner only.
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(15.dp)
+                    .clip(CircleShape)
+                    .background(ActiveIndicatorGreen),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = stringResource(R.string.theme_active_cd),
+                    tint = Color.White,
+                    modifier = Modifier.size(9.dp)
+                )
+            }
+        }
     }
 }
 

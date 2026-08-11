@@ -14,6 +14,7 @@
     <string name="dark_mode_locked_dark_desc">Locked to dark by this theme</string>
     <string name="dark_mode_locked_light_desc">Locked to light by this theme</string>
     <string name="theme_label">Theme</string>
+    <string name="theme_active_cd">Active theme</string>
     <string name="auto_rotate_label">Auto Rotate</string>
     <string name="auto_rotate_on_desc">Flips upside down when flipped</string>
     <string name="auto_rotate_off_desc">Locked to portrait</string>
