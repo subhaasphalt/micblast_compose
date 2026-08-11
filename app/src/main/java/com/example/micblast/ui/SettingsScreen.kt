@@ -220,8 +220,8 @@ private fun ThemePickerSection(
 private val ActiveIndicatorGreen = Color(0xFF34C759)
 
 /**
- * One theme's preview tile, kept deliberately minimal: a left accent bar in
- * the theme's main color, the 4 voice-mode button colors as circles, the
+ * One theme's preview tile, kept deliberately minimal: a left accent bar
+ * gradienting between the theme's 2 accent colors, the 4 voice-mode button colors as circles, the
  * theme name with its supported modes in a smaller/muted caption below it,
  * and — only when this theme is the active one — a small green tick badge
  * in the top-right corner. No borders or pills competing for attention;
@@ -253,12 +253,16 @@ private fun ThemeTile(
             )
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            // Left accent bar: the theme's main color, full tile height.
+            // Left accent bar: gradient of the theme's 2 accent colors, full tile height.
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(4.dp)
-                    .background(theme.accentPrimary)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(theme.accentPrimary, theme.accentSecondary)
+                        )
+                    )
             )
 
             Column(

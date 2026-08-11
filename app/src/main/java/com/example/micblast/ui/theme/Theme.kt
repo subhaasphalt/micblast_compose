@@ -36,13 +36,12 @@ data class MicBlastColors(
 
 /**
  * Combines a theme's accents with the shared surface palette for [darkTheme].
- * This is the one place theme + mode actually get merged — and where the
- * light-mode contrast fix-up happens (see [readableOnLightSurface]), so
- * every theme gets it for free without storing extra data.
+ * This is the one place theme + mode actually get merged. Accent colors are
+ * passed through as-authored in [ThemeSpec] — no light-mode darkening — so
+ * what renders always matches the theme preview tiles in Settings.
  */
 fun buildMicBlastColors(theme: ThemeSpec, darkTheme: Boolean): MicBlastColors {
     val surfaces = if (darkTheme) DarkSurfacePalette else LightSurfacePalette
-    fun accent(color: Color) = if (darkTheme) color else color.readableOnLightSurface()
     return MicBlastColors(
         bgTop = surfaces.BgTop,
         bgMid = surfaces.BgMid,
@@ -50,12 +49,12 @@ fun buildMicBlastColors(theme: ThemeSpec, darkTheme: Boolean): MicBlastColors {
         surface = surfaces.Surface,
         surfaceChip = surfaces.SurfaceChip,
         borderFaint = surfaces.BorderFaint,
-        accentPrimary = accent(theme.accentPrimary),
-        accentSecondary = accent(theme.accentSecondary),
-        mode1AccentColor = accent(theme.mode1AccentColor),
-        mode2AccentColor = accent(theme.mode2AccentColor),
-        mode3AccentColor = accent(theme.mode3AccentColor),
-        mode4AccentColor = accent(theme.mode4AccentColor),
+        accentPrimary = theme.accentPrimary,
+        accentSecondary = theme.accentSecondary,
+        mode1AccentColor = theme.mode1AccentColor,
+        mode2AccentColor = theme.mode2AccentColor,
+        mode3AccentColor = theme.mode3AccentColor,
+        mode4AccentColor = theme.mode4AccentColor,
         textPrimary = surfaces.TextPrimary,
         textSecondary = surfaces.TextSecondary,
         textMuted = surfaces.TextMuted,
