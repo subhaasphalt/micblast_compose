@@ -349,13 +349,18 @@ private fun AudioSetupDropdown(
     Column {
         SectionHeader(label = stringResource(R.string.audio_setup_label))
 
+        var triggerWidthPx by remember { mutableFloatStateOf(0f) }
+        val density = LocalDensity.current
+
         Box(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp)
+                    .onGloballyPositioned { triggerWidthPx = it.size.width.toFloat() }
                     .clip(RoundedCornerShape(14.dp))
-                    .background(colors.surface)
+                    .background(colors.islandAudioSetup)
+                    .border(1.dp, colors.islandAudioSetupBorder, RoundedCornerShape(14.dp))
                     .clickable { expanded = !expanded }
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -380,17 +385,28 @@ private fun AudioSetupDropdown(
                 )
             }
 
+            // Match the menu's width to the trigger row instead of letting it
+            // shrink-wrap the longest label — a dropdown narrower than what
+            // opened it reads as broken.
             DropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { expanded = false }
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .width(with(density) { triggerWidthPx.toDp() })
+                    .background(colors.islandAudioSetup)
             ) {
                 labels.forEachIndexed { index, label ->
                     DropdownMenuItem(
                         text = {
+                            // Plain text only — no icon here. An emoji baked
+                            // into the label fights every theme's accent
+                            // instead of adopting it.
                             Text(
                                 label,
                                 color = colors.textPrimary,
-                                fontSize = 15.sp
+                                fontSize = 15.sp,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         },
                         onClick = {
@@ -523,8 +539,8 @@ private fun ModeAndIntensityGroup(
     )
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = colors.surface),
-        border = BorderStroke(1.dp, colors.borderFaint),
+        colors = CardDefaults.cardColors(containerColor = colors.islandModeGrid),
+        border = BorderStroke(1.dp, colors.islandModeGridBorder),
         shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -570,7 +586,7 @@ private fun ModeButton(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.microBlastColors
-    val background = if (selected) mode.color.copy(alpha = 0.15f) else colors.surfaceChip
+    val background = if (selected) mode.color.copy(alpha = colors.selectedTileFillAlpha) else colors.surfaceChip
     val borderColor = if (selected) mode.color else colors.borderFaint
 
     Box(
@@ -812,6 +828,7 @@ private fun VerticalNeonSlider(
 
 @Composable
 private fun LockOverlay(onUnlock: () -> Unit) {
+    val colors = MaterialTheme.microBlastColors
     val density = LocalDensity.current
     val thumbSizePx = with(density) { 44.dp.toPx() }
     var trackWidthPx by remember { mutableFloatStateOf(1f) }
@@ -820,7 +837,7 @@ private fun LockOverlay(onUnlock: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.82f))
+            .background(colors.bgTop.copy(alpha = 0.94f))
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragStart = { dragPx = 0f },
@@ -843,7 +860,7 @@ private fun LockOverlay(onUnlock: () -> Unit) {
             Icon(
                 imageVector = Icons.Filled.LockOpen,
                 contentDescription = null,
-                tint = Color(0xFFFF2D95),
+                tint = colors.accentSecondary,
                 modifier = Modifier.size(42.dp)
             )
 
@@ -851,7 +868,7 @@ private fun LockOverlay(onUnlock: () -> Unit) {
 
             Text(
                 text = stringResource(R.string.slide_to_unlock),
-                color = Color.White,
+                color = colors.textPrimary,
                 fontSize = 15.sp
             )
 
@@ -862,8 +879,8 @@ private fun LockOverlay(onUnlock: () -> Unit) {
                     .width(260.dp)
                     .height(52.dp)
                     .clip(RoundedCornerShape(26.dp))
-                    .background(Color(0xFF1A1625))
-                    .border(1.dp, Color(0xFF33304A), RoundedCornerShape(26.dp))
+                    .background(colors.surfaceChip)
+                    .border(1.dp, colors.borderFaint, RoundedCornerShape(26.dp))
                     .padding(4.dp)
                     .onGloballyPositioned { trackWidthPx = it.size.width.toFloat() }
             ) {
@@ -873,7 +890,7 @@ private fun LockOverlay(onUnlock: () -> Unit) {
                         .clip(RoundedCornerShape(22.dp))
                         .background(
                             Brush.horizontalGradient(
-                                colors = listOf(Color(0xFF00E5FF), Color(0xFFFF2D95)),
+                                colors = listOf(colors.accentPrimary, colors.accentSecondary),
                                 endX = dragPx + thumbSizePx
                             )
                         )
@@ -885,14 +902,14 @@ private fun LockOverlay(onUnlock: () -> Unit) {
                         .offset { IntOffset(dragPx.roundToInt(), 0) }
                         .clip(CircleShape)
                         .background(
-                            lerp(Color(0xFF00E5FF), Color(0xFFFF2D95), (dragPx / (trackWidthPx - thumbSizePx)).coerceIn(0f, 1f))
+                            lerp(colors.accentPrimary, colors.accentSecondary, (dragPx / (trackWidthPx - thumbSizePx)).coerceIn(0f, 1f))
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = null,
-                        tint = Color(0xFF0B0F1A)
+                        tint = colors.bgTop
                     )
                 }
             }

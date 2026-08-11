@@ -7,14 +7,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 
 /**
  * All the colors MainScreen actually reaches for. Built by merging a
- * [ThemeSpec] (the 6 accent colors + mode-support flag) with whichever
+ * [ThemeSpec] (the accent colors + mode-support flag) with whichever
  * shared surface palette matches the active light/dark mode. Every
  * composable downstream reads through MaterialTheme.microBlastColors, so
  * switching either the theme or the mode in Settings updates the whole
  * screen automatically.
+ *
+ * islandAudioSetup/islandModeGrid/their border counterparts exist so the
+ * control islands (Audio Setup row, Mode Grid card) read as distinct zones
+ * instead of one flat sheet — each is [Surface] tinted a little toward
+ * that island's accent, derived automatically from the theme's accents
+ * rather than hand-picked per theme.
  */
 data class MicBlastColors(
     val bgTop: Color,
@@ -32,16 +39,27 @@ data class MicBlastColors(
     val textPrimary: Color,
     val textSecondary: Color,
     val textMuted: Color,
+    val islandAudioSetup: Color,
+    val islandAudioSetupBorder: Color,
+    val islandModeGrid: Color,
+    val islandModeGridBorder: Color,
+    val selectedTileFillAlpha: Float,
 )
 
 /**
  * Combines a theme's accents with the shared surface palette for [darkTheme].
  * This is the one place theme + mode actually get merged. Accent colors are
- * passed through as-authored in [ThemeSpec] — no light-mode darkening — so
- * what renders always matches the theme preview tiles in Settings.
+ * resolved per-mode (see [ThemeSpec.resolvedAccentPrimary] etc.) so themes
+ * like Monochrome can flip between a light and dark accent instead of
+ * being stuck with one hex that only half-works.
  */
 fun buildMicBlastColors(theme: ThemeSpec, darkTheme: Boolean): MicBlastColors {
     val surfaces = if (darkTheme) DarkSurfacePalette else LightSurfacePalette
+
+    val accentPrimary = theme.resolvedAccentPrimary(darkTheme)
+    val accentSecondary = theme.resolvedAccentSecondary(darkTheme)
+    val modeAccents = theme.resolvedModeAccents(darkTheme)
+
     return MicBlastColors(
         bgTop = surfaces.BgTop,
         bgMid = surfaces.BgMid,
@@ -49,15 +67,20 @@ fun buildMicBlastColors(theme: ThemeSpec, darkTheme: Boolean): MicBlastColors {
         surface = surfaces.Surface,
         surfaceChip = surfaces.SurfaceChip,
         borderFaint = surfaces.BorderFaint,
-        accentPrimary = theme.accentPrimary,
-        accentSecondary = theme.accentSecondary,
-        mode1AccentColor = theme.mode1AccentColor,
-        mode2AccentColor = theme.mode2AccentColor,
-        mode3AccentColor = theme.mode3AccentColor,
-        mode4AccentColor = theme.mode4AccentColor,
+        accentPrimary = accentPrimary,
+        accentSecondary = accentSecondary,
+        mode1AccentColor = modeAccents.getOrElse(0) { theme.mode1AccentColor },
+        mode2AccentColor = modeAccents.getOrElse(1) { theme.mode2AccentColor },
+        mode3AccentColor = modeAccents.getOrElse(2) { theme.mode3AccentColor },
+        mode4AccentColor = modeAccents.getOrElse(3) { theme.mode4AccentColor },
         textPrimary = surfaces.TextPrimary,
         textSecondary = surfaces.TextSecondary,
         textMuted = surfaces.TextMuted,
+        islandAudioSetup = lerp(surfaces.Surface, accentPrimary, theme.islandTintStrength),
+        islandAudioSetupBorder = lerp(surfaces.BorderFaint, accentPrimary, theme.borderTintStrength),
+        islandModeGrid = lerp(surfaces.Surface, accentSecondary, theme.islandTintStrength),
+        islandModeGridBorder = lerp(surfaces.BorderFaint, accentSecondary, theme.borderTintStrength),
+        selectedTileFillAlpha = theme.selectedTileFillAlpha,
     )
 }
 
