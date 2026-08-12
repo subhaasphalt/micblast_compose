@@ -195,6 +195,8 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
             modifier = Modifier
                 .size(44.dp)
                 .background(colors.surface, RoundedCornerShape(12.dp))
+                .border(1.dp, colors.borderFaint, RoundedCornerShape(12.dp))
+                .padding(1.dp)
                 .border(1.5.dp, colors.accentPrimary.copy(alpha = 0.78f), RoundedCornerShape(12.dp))
         ) {
             Icon(
@@ -224,6 +226,11 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
             onClick = onLockClick,
             modifier = Modifier
                 .size(44.dp)
+                // Faint neutral ring first, accent ring on top — keeps the
+                // button's edge readable even when accentSecondary sits
+                // close in value to the background (see PrimaryActionButton).
+                .border(1.dp, colors.borderFaint, CircleShape)
+                .padding(1.dp)
                 .border(1.5.dp, colors.accentSecondary, CircleShape)
         ) {
             Icon(
@@ -280,6 +287,12 @@ private fun PrimaryActionButton(
                 .size(92.dp)
                 .clip(CircleShape)
                 .background(colors.surface)
+                // Faint neutral ring drawn just outside the accent ring so
+                // the button's edge stays readable even when the accent
+                // sits close in value to the background (e.g. Monochrome's
+                // white ring in dark mode, near-black in light mode).
+                .border(1.dp, colors.borderFaint, CircleShape)
+                .padding(1.dp)
                 .border(
                     width = 1.5.dp,
                     color = accent.copy(

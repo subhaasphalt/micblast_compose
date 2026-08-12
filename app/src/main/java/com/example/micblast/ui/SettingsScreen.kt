@@ -1,6 +1,5 @@
 package com.example.micblast.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,14 +22,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.ScreenLockRotation
+import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.StayCurrentPortrait
+import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -40,9 +41,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.micblast.R
@@ -50,6 +51,16 @@ import com.example.micblast.ui.theme.ThemeModeSupport
 import com.example.micblast.ui.theme.ThemeSpec
 import com.example.micblast.ui.theme.microBlastColors
 
+/**
+ * Settings, fully collapsed into two pieces:
+ *  - [QuickSettingsIsland]: back button + dark mode / auto-rotate / haptics,
+ *    anchored at the top and never scrolls away. Each toggle is a single
+ *    icon that swaps to a different glyph per state (sun/moon,
+ *    rotate-arrows/locked, vibrate-waves/plain) instead of an icon+label+
+ *    switch trio — the icon *is* the state.
+ *  - the theme tiles, which scroll underneath. No "Theme" header — the
+ *    tiles start immediately below the island.
+ */
 @Composable
 fun SettingsScreen(
     darkTheme: Boolean,
@@ -75,96 +86,181 @@ fun SettingsScreen(
                     colors = listOf(colors.bgTop, colors.bgMid, colors.bgBottom)
                 )
             )
-            // The theme grid can grow to any length (one row per 2 themes),
-            // and the toggle cards still need to be reachable below it —
-            // without this the screen just clips once themes overflow.
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = { hapticClick(); onBack() },
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(colors.surface, RoundedCornerShape(12.dp))
-                    .border(1.5.dp, colors.accentPrimary.copy(alpha = 0.78f), RoundedCornerShape(12.dp))
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.back_button_cd),
-                    tint = colors.accentPrimary,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-
-            Text(
-                text = stringResource(R.string.settings_title),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    brush = Brush.linearGradient(
-                        colors = listOf(colors.accentPrimary, colors.accentSecondary)
-                    )
-                ),
-                fontSize = 17.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Balances the back button so the title stays visually centered.
-            Spacer(modifier = Modifier.size(44.dp))
-        }
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        ThemePickerSection(
-            themes = themes,
-            selectedThemeId = selectedThemeId,
-            onThemeSelected = { hapticClick(); onThemeSelected(it) },
+        QuickSettingsIsland(
+            darkTheme = darkTheme,
+            darkModeToggleEnabled = darkModeToggleEnabled,
+            onDarkThemeChange = { hapticClick(); onDarkThemeChange(it) },
+            autoRotate = autoRotate,
+            onAutoRotateChange = { hapticClick(); onAutoRotateChange(it) },
+            hapticFeedback = hapticFeedback,
+            onHapticFeedbackChange = { hapticClick(); onHapticFeedbackChange(it) },
+            onBack = { hapticClick(); onBack() },
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        val darkModeDescRes = when {
-            !darkModeToggleEnabled && darkTheme -> R.string.dark_mode_locked_dark_desc
-            !darkModeToggleEnabled && !darkTheme -> R.string.dark_mode_locked_light_desc
-            darkTheme -> R.string.dark_mode_on_desc
-            else -> R.string.dark_mode_off_desc
+        // Only the tiles scroll — the island above stays put regardless of
+        // how many themes end up in the list.
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            ThemeTileGrid(
+                themes = themes,
+                selectedThemeId = selectedThemeId,
+                darkTheme = darkTheme,
+                onThemeSelected = { hapticClick(); onThemeSelected(it) },
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+/**
+ * The anchored back-button + 3-toggle bar. Each toggle is one tap target:
+ * tapping it flips the underlying boolean directly (no separate switch to
+ * hit), and its own glyph + a light accent-tinted ring communicate current
+ * state — geometry AND color, so state doesn't rely on spotting a subtle
+ * icon swap alone at a glance.
+ */
+@Composable
+private fun QuickSettingsIsland(
+    darkTheme: Boolean,
+    darkModeToggleEnabled: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
+    autoRotate: Boolean,
+    onAutoRotateChange: (Boolean) -> Unit,
+    hapticFeedback: Boolean,
+    onHapticFeedbackChange: (Boolean) -> Unit,
+    onBack: () -> Unit,
+) {
+    val colors = MaterialTheme.microBlastColors
+    val shape = RoundedCornerShape(20.dp)
+
+    val darkModeDescRes = when {
+        !darkModeToggleEnabled && darkTheme -> R.string.dark_mode_locked_dark_desc
+        !darkModeToggleEnabled && !darkTheme -> R.string.dark_mode_locked_light_desc
+        darkTheme -> R.string.dark_mode_on_desc
+        else -> R.string.dark_mode_off_desc
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.surface)
+            .border(1.dp, colors.borderFaint, shape)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier.size(44.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.back_button_cd),
+                tint = colors.textPrimary,
+                modifier = Modifier.size(24.dp)
+            )
         }
 
-        SettingsToggleCard(
-            label = stringResource(R.string.dark_mode_label),
-            description = stringResource(darkModeDescRes),
+        IslandDivider()
+
+        QuickToggle(
+            modifier = Modifier.weight(1f),
+            icon = if (darkTheme) Icons.Filled.Brightness4 else Icons.Filled.WbSunny,
+            contentDescription = "${stringResource(R.string.dark_mode_label)}: ${stringResource(darkModeDescRes)}",
             checked = darkTheme,
             enabled = darkModeToggleEnabled,
-            onCheckedChange = { hapticClick(); onDarkThemeChange(it) },
+            onToggle = { onDarkThemeChange(!darkTheme) },
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        IslandDivider()
 
-        SettingsToggleCard(
-            label = stringResource(R.string.auto_rotate_label),
-            description = stringResource(
-                if (autoRotate) R.string.auto_rotate_on_desc else R.string.auto_rotate_off_desc
-            ),
+        QuickToggle(
+            modifier = Modifier.weight(1f),
+            icon = if (autoRotate) Icons.Filled.ScreenRotation else Icons.Filled.ScreenLockRotation,
+            contentDescription = "${stringResource(R.string.auto_rotate_label)}: ${
+                stringResource(if (autoRotate) R.string.auto_rotate_on_desc else R.string.auto_rotate_off_desc)
+            }",
             checked = autoRotate,
-            onCheckedChange = { hapticClick(); onAutoRotateChange(it) },
+            onToggle = { onAutoRotateChange(!autoRotate) },
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        IslandDivider()
 
-        SettingsToggleCard(
-            label = stringResource(R.string.haptic_feedback_label),
-            description = stringResource(
-                if (hapticFeedback) R.string.haptic_feedback_on_desc else R.string.haptic_feedback_off_desc
-            ),
+        QuickToggle(
+            modifier = Modifier.weight(1f),
+            icon = if (hapticFeedback) Icons.Filled.Vibration else Icons.Filled.StayCurrentPortrait,
+            contentDescription = "${stringResource(R.string.haptic_feedback_label)}: ${
+                stringResource(if (hapticFeedback) R.string.haptic_feedback_on_desc else R.string.haptic_feedback_off_desc)
+            }",
             checked = hapticFeedback,
-            onCheckedChange = { hapticClick(); onHapticFeedbackChange(it) },
+            onToggle = { onHapticFeedbackChange(!hapticFeedback) },
         )
+    }
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun IslandDivider() {
+    val colors = MaterialTheme.microBlastColors
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(vertical = 10.dp)
+            .width(1.dp)
+            .background(colors.borderFaint)
+    )
+}
+
+/**
+ * One icon-only toggle. On: accent-tinted fill + ring, "on" glyph. Off:
+ * neutral surfaceChip fill, faint ring, "off" glyph. Same visual language
+ * as the mode-select tiles on the main screen, just circular.
+ */
+@Composable
+private fun QuickToggle(
+    icon: ImageVector,
+    contentDescription: String,
+    checked: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val colors = MaterialTheme.microBlastColors
+    val background = if (checked) colors.accentPrimary.copy(alpha = 0.16f) else colors.surfaceChip
+    val ringColor = if (checked) colors.accentPrimary else colors.borderFaint
+    val iconTint = if (checked) colors.accentPrimary else colors.textSecondary
+
+    Box(
+        modifier = modifier.alpha(if (enabled) 1f else 0.45f),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(background)
+                .border(1.dp, ringColor, CircleShape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = enabled,
+                    onClick = onToggle,
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 
@@ -175,23 +271,13 @@ fun SettingsScreen(
  * full-width row per theme.
  */
 @Composable
-private fun ThemePickerSection(
+private fun ThemeTileGrid(
     themes: List<ThemeSpec>,
     selectedThemeId: String,
+    darkTheme: Boolean,
     onThemeSelected: (String) -> Unit,
 ) {
-    val colors = MaterialTheme.microBlastColors
-
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.theme_label),
-            color = colors.textPrimary,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
         themes.chunked(2).forEach { rowThemes ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -201,6 +287,7 @@ private fun ThemePickerSection(
                     ThemeTile(
                         theme = theme,
                         selected = theme.id == selectedThemeId,
+                        darkTheme = darkTheme,
                         onClick = { onThemeSelected(theme.id) },
                         modifier = Modifier.weight(1f)
                     )
@@ -226,16 +313,28 @@ private val ActiveIndicatorGreen = Color(0xFF34C759)
  * and — only when this theme is the active one — a small green tick badge
  * in the top-right corner. No borders or pills competing for attention;
  * the accent bar and mode circles ARE the preview.
+ *
+ * Colors are resolved against this theme's own *effective* mode (its
+ * light/dark override, if any, given the app's current dark-mode request)
+ * rather than its raw authored defaults — otherwise a theme like
+ * Monochrome, whose accents flip between modes, would always preview its
+ * dark-mode colors even while the picker itself is in light mode, which is
+ * how a near-white accent circle ends up nearly invisible on a light tile.
  */
 @Composable
 private fun ThemeTile(
     theme: ThemeSpec,
     selected: Boolean,
+    darkTheme: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.microBlastColors
     val shape = RoundedCornerShape(16.dp)
+    val effectiveDark = theme.allowLightDark.resolveDarkTheme(darkTheme)
+    val previewAccentPrimary = theme.resolvedAccentPrimary(effectiveDark)
+    val previewAccentSecondary = theme.resolvedAccentSecondary(effectiveDark)
+    val previewModeAccents = theme.resolvedModeAccents(effectiveDark)
 
     Box(
         modifier = modifier
@@ -243,7 +342,7 @@ private fun ThemeTile(
             .background(colors.surfaceChip)
             .border(
                 width = if (selected) 1.5.dp else 1.dp,
-                color = if (selected) theme.accentPrimary.copy(alpha = 0.55f) else colors.borderFaint,
+                color = if (selected) previewAccentPrimary.copy(alpha = 0.55f) else colors.borderFaint,
                 shape = shape,
             )
             .clickable(
@@ -260,7 +359,7 @@ private fun ThemeTile(
                     .width(4.dp)
                     .background(
                         Brush.verticalGradient(
-                            listOf(theme.accentPrimary, theme.accentSecondary)
+                            listOf(previewAccentPrimary, previewAccentSecondary)
                         )
                     )
             )
@@ -298,17 +397,19 @@ private fun ThemeTile(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    listOf(
-                        theme.mode1AccentColor,
-                        theme.mode2AccentColor,
-                        theme.mode3AccentColor,
-                        theme.mode4AccentColor,
-                    ).forEach { modeColor ->
+                    previewModeAccents.forEach { modeColor ->
                         Box(
                             modifier = Modifier
                                 .size(18.dp)
                                 .clip(CircleShape)
                                 .background(modeColor)
+                                // Faint neutral ring so every circle stays
+                                // legible even when a theme's accent sits
+                                // close in value to the tile background —
+                                // this doesn't depend on knowing the accent
+                                // color in advance, so it holds for any
+                                // theme, not just ones we've eyeballed.
+                                .border(1.dp, colors.borderFaint, CircleShape)
                         )
                     }
                 }
@@ -333,60 +434,6 @@ private fun ThemeTile(
                     modifier = Modifier.size(9.dp)
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun SettingsToggleCard(
-    label: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    enabled: Boolean = true,
-) {
-    val colors = MaterialTheme.microBlastColors
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = colors.surface),
-        border = BorderStroke(1.dp, if (checked) colors.accentPrimary.copy(alpha = 0.34f) else colors.borderFaint),
-        shape = RoundedCornerShape(18.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .alpha(if (enabled) 1f else 0.55f)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    color = colors.textPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = description,
-                    color = colors.textSecondary,
-                    fontSize = 12.sp
-                )
-            }
-
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                enabled = enabled,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = colors.accentPrimary,
-                    checkedTrackColor = colors.accentPrimary.copy(alpha = 0.4f),
-                    uncheckedThumbColor = colors.textSecondary,
-                    uncheckedTrackColor = colors.borderFaint,
-                )
-            )
         }
     }
 }
