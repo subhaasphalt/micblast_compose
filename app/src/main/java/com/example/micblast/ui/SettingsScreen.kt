@@ -147,6 +147,11 @@ private fun QuickSettingsIsland(
         else -> R.string.dark_mode_off_desc
     }
 
+    // No dividers between the buttons, and all four (back + 3 toggles) are
+    // the same fixed 40dp size — Arrangement.SpaceEvenly then gives them
+    // identical gaps instead of the back button sitting tight against the
+    // edge while the toggles stretch to fill whatever weighted space is
+    // left over.
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -154,6 +159,7 @@ private fun QuickSettingsIsland(
             .background(colors.surface)
             .border(1.dp, colors.borderFaint, shape)
             .padding(horizontal = TopBarIslandPadding, vertical = TopBarIslandPadding),
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Same TopBarIconButton used for menu/lock on MainScreen — same
@@ -166,10 +172,7 @@ private fun QuickSettingsIsland(
             onClick = onBack,
         )
 
-        IslandDivider()
-
         QuickToggle(
-            modifier = Modifier.weight(1f),
             icon = if (darkTheme) Icons.Filled.Brightness4 else Icons.Filled.WbSunny,
             contentDescription = "${stringResource(R.string.dark_mode_label)}: ${stringResource(darkModeDescRes)}",
             checked = darkTheme,
@@ -177,10 +180,7 @@ private fun QuickSettingsIsland(
             onToggle = { onDarkThemeChange(!darkTheme) },
         )
 
-        IslandDivider()
-
         QuickToggle(
-            modifier = Modifier.weight(1f),
             icon = if (autoRotate) Icons.Filled.ScreenRotation else Icons.Filled.ScreenLockRotation,
             contentDescription = "${stringResource(R.string.auto_rotate_label)}: ${
                 stringResource(if (autoRotate) R.string.auto_rotate_on_desc else R.string.auto_rotate_off_desc)
@@ -189,10 +189,7 @@ private fun QuickSettingsIsland(
             onToggle = { onAutoRotateChange(!autoRotate) },
         )
 
-        IslandDivider()
-
         QuickToggle(
-            modifier = Modifier.weight(1f),
             icon = if (hapticFeedback) Icons.Filled.Vibration else Icons.Filled.StayCurrentPortrait,
             contentDescription = "${stringResource(R.string.haptic_feedback_label)}: ${
                 stringResource(if (hapticFeedback) R.string.haptic_feedback_on_desc else R.string.haptic_feedback_off_desc)
@@ -201,21 +198,6 @@ private fun QuickSettingsIsland(
             onToggle = { onHapticFeedbackChange(!hapticFeedback) },
         )
     }
-}
-
-@Composable
-private fun IslandDivider() {
-    val colors = MaterialTheme.microBlastColors
-    Box(
-        modifier = Modifier
-            // Fixed height, not fillMaxHeight — this Row isn't in a
-            // height-bounded context, so fillMaxHeight here expanded to
-            // consume nearly the full screen and starved the scrolling
-            // tile list below of any room.
-            .height(24.dp)
-            .width(1.dp)
-            .background(colors.borderFaint)
-    )
 }
 
 /**

@@ -85,7 +85,7 @@ fun buildMicBlastColors(theme: ThemeSpec, darkTheme: Boolean): MicBlastColors {
 }
 
 private val LocalMicBlastColors = staticCompositionLocalOf {
-    buildMicBlastColors(DefaultTheme, darkTheme = true)
+    buildMicBlastColors(DefaultTheme, darkTheme = false)
 }
 
 /**
@@ -107,7 +107,7 @@ val MaterialTheme.microBlastColors: MicBlastColors
 @Composable
 fun MicBlastTheme(
     theme: ThemeSpec = DefaultTheme,
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val effectiveDarkTheme = theme.allowLightDark.resolveDarkTheme(darkTheme)

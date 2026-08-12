@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
     private var isLocked by mutableStateOf(false)
     private var showSettings by mutableStateOf(false)
     private var showExitConfirmation by mutableStateOf(false)
-    private var darkTheme by mutableStateOf(true)
+    private var darkTheme by mutableStateOf(false)
     private var themeId by mutableStateOf(DefaultTheme.id)
     private var autoRotate by mutableStateOf(true)
     private var hapticsEnabled by mutableStateOf(true)
@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
         // state) correctly even if the stored dark_theme value predates it
         // or was left over from a different theme.
         darkTheme = themeById(themeId).allowLightDark
-            .resolveDarkTheme(settingsPrefs.getBoolean(KEY_DARK_THEME, true))
+            .resolveDarkTheme(settingsPrefs.getBoolean(KEY_DARK_THEME, false))
         autoRotate = settingsPrefs.getBoolean(KEY_AUTO_ROTATE, true)
         hapticsEnabled = settingsPrefs.getBoolean(KEY_HAPTICS, true)
         currentMode = settingsPrefs.getString(KEY_MODE, AudioLoopbackService.MODE_NORMAL)
