@@ -210,8 +210,11 @@ private fun IslandDivider() {
     val colors = MaterialTheme.microBlastColors
     Box(
         modifier = Modifier
-            .fillMaxHeight()
-            .padding(vertical = 10.dp)
+            // Fixed height, not fillMaxHeight — this Row isn't in a
+            // height-bounded context, so fillMaxHeight here expanded to
+            // consume nearly the full screen and starved the scrolling
+            // tile list below of any room.
+            .height(24.dp)
             .width(1.dp)
             .background(colors.borderFaint)
     )
