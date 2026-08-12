@@ -138,7 +138,7 @@ private fun QuickSettingsIsland(
     onBack: () -> Unit,
 ) {
     val colors = MaterialTheme.microBlastColors
-    val shape = RoundedCornerShape(20.dp)
+    val shape = TopBarIslandShape
 
     val darkModeDescRes = when {
         !darkModeToggleEnabled && darkTheme -> R.string.dark_mode_locked_dark_desc
@@ -153,20 +153,18 @@ private fun QuickSettingsIsland(
             .clip(shape)
             .background(colors.surface)
             .border(1.dp, colors.borderFaint, shape)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .padding(horizontal = TopBarIslandPadding, vertical = TopBarIslandPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
+        // Same TopBarIconButton used for menu/lock on MainScreen — same
+        // size, fill, and ring geometry, just a neutral tint since back
+        // isn't a themed accent action.
+        TopBarIconButton(
+            icon = Icons.Filled.ArrowBack,
+            contentDescription = stringResource(R.string.back_button_cd),
+            tint = colors.textPrimary,
             onClick = onBack,
-            modifier = Modifier.size(44.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.back_button_cd),
-                tint = colors.textPrimary,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        )
 
         IslandDivider()
 

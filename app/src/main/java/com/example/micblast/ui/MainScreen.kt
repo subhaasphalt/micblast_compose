@@ -186,25 +186,25 @@ fun MainScreen(
 private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
     val colors = MaterialTheme.microBlastColors
 
+    // Same island shape/fill/padding as SettingsScreen's QuickSettingsIsland
+    // (see TopBarIslandShape) so the top chrome reads as one continuous
+    // object as the user navigates back and forth, instead of jumping from
+    // a bare row here to a pill-shaped card there.
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(TopBarIslandShape)
+            .background(colors.surface)
+            .border(1.dp, colors.borderFaint, TopBarIslandShape)
+            .padding(horizontal = TopBarIslandPadding, vertical = TopBarIslandPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
+        TopBarIconButton(
+            icon = Icons.Filled.Menu,
+            contentDescription = stringResource(R.string.menu_button_cd),
+            tint = colors.accentPrimary,
             onClick = onMenuClick,
-            modifier = Modifier
-                .size(44.dp)
-                .background(colors.surface, RoundedCornerShape(12.dp))
-                .border(1.dp, colors.borderFaint, RoundedCornerShape(12.dp))
-                .padding(1.dp)
-                .border(1.5.dp, colors.accentPrimary.copy(alpha = 0.78f), RoundedCornerShape(12.dp))
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Menu,
-                contentDescription = stringResource(R.string.menu_button_cd),
-                tint = colors.accentPrimary
-            )
-        }
+        )
 
         Text(
             text = stringResource(R.string.app_title),
@@ -222,23 +222,12 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
             modifier = Modifier.weight(1f)
         )
 
-        IconButton(
+        TopBarIconButton(
+            icon = Icons.Filled.Lock,
+            contentDescription = stringResource(R.string.lock_button_cd),
+            tint = colors.accentSecondary,
             onClick = onLockClick,
-            modifier = Modifier
-                .size(44.dp)
-                // Faint neutral ring first, accent ring on top — keeps the
-                // button's edge readable even when accentSecondary sits
-                // close in value to the background (see PrimaryActionButton).
-                .border(1.dp, colors.borderFaint, CircleShape)
-                .padding(1.dp)
-                .border(1.5.dp, colors.accentSecondary, CircleShape)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Lock,
-                contentDescription = stringResource(R.string.lock_button_cd),
-                tint = colors.accentSecondary
-            )
-        }
+        )
     }
 }
 
