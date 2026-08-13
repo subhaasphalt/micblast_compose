@@ -25,7 +25,12 @@ import com.example.micblast.ui.theme.microBlastColors
  * showed a visible jump in the top chrome's shape and inset. Both screens
  * now pull from here instead.
  */
-val TopBarIslandShape = RoundedCornerShape(20.dp)
+// Percent-based so the corners are always fully rounded into a true pill
+// regardless of the row's actual height (40dp buttons + 10dp vertical
+// padding today, but this way it stays a pill even if those change) —
+// the straight edges of a fixed-radius rounded rect didn't line up with
+// the circular buttons sitting inside it.
+val TopBarIslandShape = RoundedCornerShape(percent = 50)
 val TopBarIslandPadding: Dp = 10.dp
 
 /**

@@ -148,11 +148,10 @@ private fun QuickSettingsIsland(
     }
 
     // No dividers between the buttons, and all four (back + 3 toggles) are
-    // the same fixed 40dp size — spacedBy with a fixed 16dp gap, wrapped in
-    // a weighted spacer on each side, gives every gap (edge-to-first,
-    // between-buttons, last-to-edge) the exact same width. SpaceEvenly
-    // looks equivalent on paper but rounds gap widths independently per
-    // segment, which is what produced the slightly-off spacing before.
+    // the same fixed 40dp size — SpaceEvenly anchors the back button near
+    // the left edge (mirroring the hamburger's position in MainScreen's
+    // TopBar) and spreads the toggles evenly across the rest of the pill,
+    // rather than clustering the whole group away from the edges.
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -160,10 +159,9 @@ private fun QuickSettingsIsland(
             .background(colors.surface)
             .border(1.dp, colors.borderFaint, shape)
             .padding(horizontal = TopBarIslandPadding, vertical = TopBarIslandPadding),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Spacer(modifier = Modifier.weight(1f))
         // Same TopBarIconButton used for menu/lock on MainScreen — same
         // size, fill, and ring geometry, just a neutral tint since back
         // isn't a themed accent action.
@@ -199,8 +197,6 @@ private fun QuickSettingsIsland(
             checked = hapticFeedback,
             onToggle = { onHapticFeedbackChange(!hapticFeedback) },
         )
-
-        Spacer(modifier = Modifier.weight(1f))
     }
 }
 

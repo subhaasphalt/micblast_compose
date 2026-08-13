@@ -355,21 +355,16 @@ private fun AudioSetupDropdown(
         val density = LocalDensity.current
 
         Box(modifier = Modifier.fillMaxWidth()) {
-            // Fully-rounded pill (corner radius = half the row's own
-            // height) instead of a softened rectangle — echoes the
-            // circular button language used everywhere else in the top
-            // chrome rather than competing with it.
-            val audioSetupShape = RoundedCornerShape(32.dp)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp)
                     .onGloballyPositioned { triggerWidthPx = it.size.width.toFloat() }
-                    .clip(audioSetupShape)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(colors.islandAudioSetup)
-                    .border(1.dp, colors.islandAudioSetupBorder, audioSetupShape)
+                    .border(1.dp, colors.islandAudioSetupBorder, RoundedCornerShape(14.dp))
                     .clickable { expanded = !expanded }
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Keep the compact label single-line so long device routes
