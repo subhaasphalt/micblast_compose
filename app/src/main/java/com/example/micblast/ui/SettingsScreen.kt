@@ -148,10 +148,11 @@ private fun QuickSettingsIsland(
     }
 
     // No dividers between the buttons, and all four (back + 3 toggles) are
-    // the same fixed 40dp size — Arrangement.SpaceEvenly then gives them
-    // identical gaps instead of the back button sitting tight against the
-    // edge while the toggles stretch to fill whatever weighted space is
-    // left over.
+    // the same fixed 40dp size — spacedBy with a fixed 16dp gap, wrapped in
+    // a weighted spacer on each side, gives every gap (edge-to-first,
+    // between-buttons, last-to-edge) the exact same width. SpaceEvenly
+    // looks equivalent on paper but rounds gap widths independently per
+    // segment, which is what produced the slightly-off spacing before.
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -159,9 +160,10 @@ private fun QuickSettingsIsland(
             .background(colors.surface)
             .border(1.dp, colors.borderFaint, shape)
             .padding(horizontal = TopBarIslandPadding, vertical = TopBarIslandPadding),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Spacer(modifier = Modifier.weight(1f))
         // Same TopBarIconButton used for menu/lock on MainScreen — same
         // size, fill, and ring geometry, just a neutral tint since back
         // isn't a themed accent action.
@@ -197,13 +199,18 @@ private fun QuickSettingsIsland(
             checked = hapticFeedback,
             onToggle = { onHapticFeedbackChange(!hapticFeedback) },
         )
+
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
 
 /**
- * One icon-only toggle. On: accent-tinted fill + ring, "on" glyph. Off:
- * neutral surfaceChip fill, faint ring, "off" glyph. Same visual language
- * as the mode-select tiles on the main screen, just circular.
+ * One icon-only toggle. On: accent-tinted fill + double ring, "on" glyph.
+ * Off: neutral surfaceChip fill, double ring in a muted tint, "off" glyph.
+ * Uses the exact same faint-ring + tinted-accent-ring construction as
+ * [TopBarIconButton] (menu/lock on MainScreen, back on this screen) so all
+ * four buttons in the settings island read as one consistent button
+ * family instead of the toggles looking like a plainer, flatter control.
  */
 @Composable
 private fun QuickToggle(
@@ -215,8 +222,7 @@ private fun QuickToggle(
     enabled: Boolean = true,
 ) {
     val colors = MaterialTheme.microBlastColors
-    val background = if (checked) colors.accentPrimary.copy(alpha = 0.16f) else colors.surfaceChip
-    val ringColor = if (checked) colors.accentPrimary else colors.borderFaint
+    val ringTint = if (checked) colors.accentPrimary else colors.textSecondary
     val iconTint = if (checked) colors.accentPrimary else colors.textSecondary
 
     Box(
@@ -226,9 +232,10 @@ private fun QuickToggle(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape)
-                .background(background)
-                .border(1.dp, ringColor, CircleShape)
+                .background(colors.surfaceChip, CircleShape)
+                .border(1.dp, colors.borderFaint, CircleShape)
+                .padding(1.dp)
+                .border(1.5.dp, ringTint.copy(alpha = 0.78f), CircleShape)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -335,11 +342,14 @@ private fun ThemeTile(
             )
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            // Left accent bar: gradient of the theme's 2 accent colors, full tile height.
+            // Left accent bar: gradient of the theme's 2 accent colors, full
+            // tile height. Widened from 4dp to 6dp so it reads clearly as
+            // an intentional accent stripe rather than a hairline that's
+            // easy to miss at a glance.
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(4.dp)
+                    .width(6.dp)
                     .background(
                         Brush.verticalGradient(
                             listOf(previewAccentPrimary, previewAccentSecondary)
@@ -350,7 +360,7 @@ private fun ThemeTile(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 12.dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
+                    .padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
             ) {
                 Text(
                     text = theme.displayName,
