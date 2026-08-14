@@ -148,18 +148,18 @@ private fun QuickSettingsIsland(
     }
 
     // No dividers between the buttons, and all four (back + 3 toggles) are
-    // the same fixed 40dp size — SpaceEvenly anchors the back button near
-    // the left edge (mirroring the hamburger's position in MainScreen's
-    // TopBar) and spreads the toggles evenly across the rest of the pill,
-    // rather than clustering the whole group away from the edges.
+    // the same fixed 40dp size — SpaceBetween with zero horizontal inset
+    // pins the first and last buttons flush against the pill's edges
+    // (they're sized to sit inside the pill's rounded caps without being
+    // clipped) and spreads the two middle buttons evenly between them.
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
             .background(colors.surface)
             .border(1.dp, colors.borderFaint, shape)
-            .padding(horizontal = TopBarIslandPadding, vertical = TopBarIslandPadding),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .padding(vertical = TopBarIslandPadding),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Same TopBarIconButton used for menu/lock on MainScreen — same

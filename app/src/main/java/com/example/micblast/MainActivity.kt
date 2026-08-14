@@ -181,7 +181,7 @@ class MainActivity : ComponentActivity() {
                         onDarkThemeChange = ::onDarkThemeChanged,
                         darkModeToggleEnabled = activeTheme.allowLightDark.allowsToggle,
                         themes = AppThemes,
-                        selectedThemeId = themeId,
+                        selectedThemeId = activeTheme.id,
                         onThemeSelected = ::onThemeSelected,
                         autoRotate = autoRotate,
                         onAutoRotateChange = ::onAutoRotateChanged,
