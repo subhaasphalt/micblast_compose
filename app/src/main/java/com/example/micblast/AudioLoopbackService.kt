@@ -31,6 +31,45 @@ import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.roundToInt
 
+// Single feedback-delay comb filter — one "echo tap" in the reverb. Buffer
+// is allocated once at construction (sized to the delay in samples) and
+// reused for the life of the service; nothing here allocates per-sample or
+// per-buffer, which matters since this runs on the real-time audio thread.
+// The one-pole lowpass in the feedback path (`damp`) rolls off the highs on
+// each repeat, the same trick Freeverb-style reverbs use so the tail
+// darkens as it decays instead of staying harsh/metallic.
+private class ReverbComb(delaySamples: Int) {
+    private val buffer = FloatArray(delaySamples)
+    private var index = 0
+    private var lowpassState = 0f
+
+    fun process(input: Float, feedback: Float, damp: Float): Float {
+        val delayed = buffer[index]
+        lowpassState = delayed * (1f - damp) + lowpassState * damp
+        buffer[index] = input + lowpassState * feedback
+        index = (index + 1) % buffer.size
+        return delayed
+    }
+}
+
+// All-pass filter — diffuses the discrete comb echoes into a smoother wash
+// instead of a series of distinct slap-back repeats. Fixed 0.5 feedback is
+// the standard Schroeder-reverb value; it's what gives the diffusion its
+// characteristic smear without coloring the tone.
+private class ReverbAllPass(delaySamples: Int) {
+    private val buffer = FloatArray(delaySamples)
+    private var index = 0
+    private val feedback = 0.5f
+
+    fun process(input: Float): Float {
+        val delayed = buffer[index]
+        val out = -input + delayed
+        buffer[index] = input + delayed * feedback
+        index = (index + 1) % buffer.size
+        return out
+    }
+}
+
 class AudioLoopbackService : Service() {
 
     private var audioRecord: AudioRecord? = null
@@ -43,6 +82,19 @@ class AudioLoopbackService : Service() {
 
     @Volatile
     private var ringModPhase = 0.0
+
+    // Normal mode's reverb: a Schroeder-style bank of 4 parallel combs
+    // feeding 2 series all-pass filters. Delay lengths are the classic
+    // Freeverb values (in samples, tuned for ~44.1kHz), which is why
+    // sampleRate isn't threaded through here — this app always runs at a
+    // fixed 44100 anyway (see beginAudioPipeline). Think "PA speaker
+    // feeding back across a stadium" rather than a tight studio plate.
+    private val reverbCombs = arrayOf(
+        ReverbComb(1557), ReverbComb(1617), ReverbComb(1491), ReverbComb(1422)
+    )
+    private val reverbAllPasses = arrayOf(
+        ReverbAllPass(556), ReverbAllPass(225)
+    )
 
     @Volatile
     private var currentMode = MODE_NORMAL
@@ -510,9 +562,40 @@ class AudioLoopbackService : Service() {
                 }
                 if (ringModPhase > 1.0) ringModPhase %= 1.0
             }
+            MODE_NORMAL -> {
+                if (intensity <= 0.001f) {
+                    System.arraycopy(input, 0, output, 0, len)
+                } else {
+                    applyReverb(input, len, output)
+                }
+            }
             else -> {
                 System.arraycopy(input, 0, output, 0, len)
             }
+        }
+    }
+
+    // Normal mode's "jansabha PA" reverb. Feedback and wet mix both climb
+    // with intensity but stay well short of 1.0 even at max — that keeps
+    // the tail decaying (a long, boomy echo) instead of building into an
+    // actual runaway squeal like a mic too close to a speaker.
+    private fun applyReverb(input: ShortArray, len: Int, output: ShortArray) {
+        val feedback = 0.28f + intensity * 0.45f // 0.28..0.73
+        val damp = 0.2f
+        val wet = intensity * 0.65f
+        val dry = 1f - wet * 0.5f
+        for (i in 0 until len) {
+            val dryf = input[i].toFloat()
+            var wetf = 0f
+            for (comb in reverbCombs) {
+                wetf += comb.process(dryf, feedback, damp)
+            }
+            wetf /= reverbCombs.size
+            for (allPass in reverbAllPasses) {
+                wetf = allPass.process(wetf)
+            }
+            val mixed = dryf * dry + wetf * wet
+            output[i] = mixed.toInt().coerceIn(-32768, 32767).toShort()
         }
     }
 
@@ -641,7 +724,7 @@ class AudioLoopbackService : Service() {
 
         val gainLabel = "Boost %.1f×".format(gain)
         val intensityLabel = if (currentMode == MODE_NORMAL) {
-            "Intensity: N/A"
+            "Reverb: ${(intensity * 100f).roundToInt()}%"
         } else {
             "Intensity: ${(intensity * 100f).roundToInt()}%"
         }

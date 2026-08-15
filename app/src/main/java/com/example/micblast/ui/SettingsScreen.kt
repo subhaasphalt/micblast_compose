@@ -148,17 +148,18 @@ private fun QuickSettingsIsland(
     }
 
     // No dividers between the buttons, and all four (back + 3 toggles) are
-    // the same fixed 40dp size — SpaceBetween with zero horizontal inset
-    // pins the first and last buttons flush against the pill's edges
-    // (they're sized to sit inside the pill's rounded caps without being
-    // clipped) and spreads the two middle buttons evenly between them.
+    // the same fixed 40dp size. Same horizontal+vertical TopBarIslandPadding
+    // inset as MainScreen's TopBar (menu/lock) — that's what keeps the two
+    // islands reading as the same object as you navigate back and forth.
+    // SpaceBetween then pins back/device to the (now inset, not flush)
+    // edges and spreads the two middle toggles evenly between them.
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
             .background(colors.surface)
             .border(1.dp, colors.borderFaint, shape)
-            .padding(vertical = TopBarIslandPadding),
+            .padding(horizontal = TopBarIslandPadding, vertical = TopBarIslandPadding),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

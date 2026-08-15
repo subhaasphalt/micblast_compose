@@ -171,7 +171,9 @@ fun MainScreen(
                 currentMode = currentMode,
                 onModeSelect = { mode -> hapticClick(); onModeSelect(mode) },
                 intensityProgress = intensityProgress,
-                intensityEnabled = currentMode != AudioLoopbackService.MODE_NORMAL,
+                // Normal mode uses this slider for reverb amount now, so
+                // it's live in every mode — nothing to disable anymore.
+                intensityEnabled = true,
                 onIntensityChange = onIntensityChange
             )
         }
