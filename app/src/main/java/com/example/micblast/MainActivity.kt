@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
     private fun refreshWiredMicConnected() {
         wiredMicConnected = audioManager
             ?.getDevices(AudioManager.GET_DEVICES_INPUTS)
-            ?.any { it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET }
+            ?.any { it.type in AudioLoopbackService.WIRED_MIC_INPUT_TYPES }
             ?: false
     }
 

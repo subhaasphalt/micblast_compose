@@ -412,22 +412,30 @@ private fun AudioSetupOption(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Break the label at the arrow ("Wired mic" / "→ Phone speaker")
+        // instead of leaving it to word-wrap wherever it happens to run out
+        // of width — keeps the "what captures" and "what plays it" halves
+        // each on their own line, left-aligned, for easy reading.
+        val displayLabel = remember(label) { label.replaceFirst(" → ", "\n→ ") }
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = accent,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier
+                    .padding(top = 1.dp)
+                    .size(18.dp)
             )
             Text(
-                text = label,
+                text = displayLabel,
                 color = accent,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
                 maxLines = 2,
                 lineHeight = 14.sp,
                 overflow = TextOverflow.Ellipsis

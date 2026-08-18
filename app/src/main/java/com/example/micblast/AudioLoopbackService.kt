@@ -17,6 +17,8 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -26,6 +28,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.roundToInt
 
@@ -68,10 +71,81 @@ private class ReverbAllPass(delaySamples: Int) {
     }
 }
 
+// Standard RBJ-cookbook biquad (direct form I). Used here as a fixed
+// highpass/lowpass pair bracketing the human speaking range, so it's built
+// once with a static cutoff/Q rather than exposing generic filter design —
+// this app only ever needs the one voice-band shape.
+private class Biquad(
+    b0: Double, b1: Double, b2: Double,
+    a0: Double, a1: Double, a2: Double
+) {
+    private val b0 = b0 / a0
+    private val b1 = b1 / a0
+    private val b2 = b2 / a0
+    private val a1 = a1 / a0
+    private val a2 = a2 / a0
+    private var x1 = 0.0
+    private var x2 = 0.0
+    private var y1 = 0.0
+    private var y2 = 0.0
+
+    fun process(input: Double): Double {
+        val out = b0 * input + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+        x2 = x1; x1 = input
+        y2 = y1; y1 = out
+        return out
+    }
+
+    companion object {
+        // Q = 0.707 (Butterworth) — the flattest passband, no resonant
+        // peak right at the cutoff that would color the voice.
+        fun highpass(sampleRate: Int, cutoffHz: Double, q: Double = 0.7071): Biquad {
+            val omega = 2.0 * PI * cutoffHz / sampleRate
+            val alpha = sin(omega) / (2.0 * q)
+            val cosw = cos(omega)
+            return Biquad(
+                b0 = (1.0 + cosw) / 2.0, b1 = -(1.0 + cosw), b2 = (1.0 + cosw) / 2.0,
+                a0 = 1.0 + alpha, a1 = -2.0 * cosw, a2 = 1.0 - alpha
+            )
+        }
+
+        fun lowpass(sampleRate: Int, cutoffHz: Double, q: Double = 0.7071): Biquad {
+            val omega = 2.0 * PI * cutoffHz / sampleRate
+            val alpha = sin(omega) / (2.0 * q)
+            val cosw = cos(omega)
+            return Biquad(
+                b0 = (1.0 - cosw) / 2.0, b1 = 1.0 - cosw, b2 = (1.0 - cosw) / 2.0,
+                a0 = 1.0 + alpha, a1 = -2.0 * cosw, a2 = 1.0 - alpha
+            )
+        }
+    }
+}
+
+// Brackets the signal to roughly the human speaking range before it hits
+// the echo canceler/pitch shifter. Two things this buys in BT mode: (1)
+// AEC's adaptive filter has less out-of-band energy (room rumble, hiss,
+// A2DP codec artifacts) fighting it, so it converges faster and cleaner;
+// (2) sub-bass rumble and high hiss are exactly the kind of broadband
+// energy that sustains a howl once one starts, so trimming them lowers
+// the loop's overall gain even though it can't remove risk at the
+// in-band frequencies where people actually talk.
+private class VoiceBandFilter(sampleRate: Int) {
+    private val highpass = Biquad.highpass(sampleRate, 100.0)
+    private val lowpass = Biquad.lowpass(sampleRate, 7000.0)
+
+    fun process(input: Short): Short {
+        val filtered = lowpass.process(highpass.process(input.toDouble()))
+        return filtered.roundToInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+    }
+}
+
 class AudioLoopbackService : Service() {
 
     private var audioRecord: AudioRecord? = null
     private var audioTrack: AudioTrack? = null
+    private var echoCanceler: AcousticEchoCanceler? = null
+    private var noiseSuppressor: NoiseSuppressor? = null
+    private var voiceBandFilter: VoiceBandFilter? = null
     private var loopThread: Thread? = null
     private var audioFocusRequest: AudioFocusRequest? = null
 
@@ -143,7 +217,7 @@ class AudioLoopbackService : Service() {
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
             if (!running || audioSetup != SETUP_WIRED_TO_SPEAKER) return
             val stillConnected = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
-                .any { it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET }
+                .any { it.type in WIRED_MIC_INPUT_TYPES }
             if (!stillConnected) {
                 Log.d(TAG, "Wired mic disconnected mid-session, stopping loopback")
                 stopLoopback(REASON_WIRED_DISCONNECTED)
@@ -209,6 +283,36 @@ class AudioLoopbackService : Service() {
         AudioDeviceInfo.TYPE_USB_DEVICE -> "USB_DEVICE"
         AudioDeviceInfo.TYPE_USB_HEADSET -> "USB_HEADSET"
         else -> "OTHER($type)"
+    }
+
+    // Best-effort mitigation for BT mode's feedback risk (built-in mic
+    // picking up the Bluetooth speaker's output). AcousticEchoCanceler is
+    // built for tightly-coupled, low-latency echo — the phone's own
+    // earpiece/speaker feeding straight back into its own mic — and vendor
+    // implementations are tuned around that case. A2DP's ~100-200ms of
+    // Bluetooth latency, plus the unpredictable acoustics of an arbitrary
+    // external speaker at some unknown distance, is a much harder echo
+    // path than AEC was designed for, so this reduces feedback rather than
+    // guaranteeing it away — pairs with keeping the phone a bit further
+    // from the speaker and not maxing out its volume.
+    private fun attachEchoMitigationEffects(audioSessionId: Int) {
+        if (AcousticEchoCanceler.isAvailable()) {
+            echoCanceler = AcousticEchoCanceler.create(audioSessionId)?.apply { enabled = true }
+            Log.d(TAG, "AcousticEchoCanceler attached: ${echoCanceler != null}")
+        } else {
+            Log.d(TAG, "AcousticEchoCanceler not available on this device")
+        }
+        if (NoiseSuppressor.isAvailable()) {
+            noiseSuppressor = NoiseSuppressor.create(audioSessionId)?.apply { enabled = true }
+            Log.d(TAG, "NoiseSuppressor attached: ${noiseSuppressor != null}")
+        }
+    }
+
+    private fun releaseEchoMitigationEffects() {
+        echoCanceler?.release()
+        echoCanceler = null
+        noiseSuppressor?.release()
+        noiseSuppressor = null
     }
 
     private fun changeMode(mode: String) {
@@ -309,7 +413,18 @@ class AudioLoopbackService : Service() {
         val recBufSize = minRecBuf * 2
         val playBufSize = minPlayBuf * 2
 
-        val chosenSource = run {
+        // Wired-to-speaker has no real echo path (the earbud mic barely
+        // hears the phone's blasting speaker), so it stays on the rawest
+        // source available for the cleanest possible capture. The BT
+        // setup, by contrast, has the phone's own built-in mic sitting in
+        // open air with a speaker playing the same signal back — that's
+        // exactly the scenario VOICE_COMMUNICATION plus the platform's
+        // acoustic echo canceler (attached below) exists to handle.
+        // UNPROCESSED/VOICE_RECOGNITION explicitly bypass that processing,
+        // so BT mode can't use them.
+        val chosenSource = if (audioSetup == SETUP_PHONE_MIC_TO_BT_SPEAKER) {
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION
+        } else {
             val unprocessedSupported = "true" == audioManager.getProperty(
                 AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED
             )
@@ -341,21 +456,31 @@ class AudioLoopbackService : Service() {
             return
         }
 
+        if (audioSetup == SETUP_PHONE_MIC_TO_BT_SPEAKER) {
+            attachEchoMitigationEffects(audioRecord!!.audioSessionId)
+            voiceBandFilter = VoiceBandFilter(sampleRate)
+        } else {
+            voiceBandFilter = null
+        }
+
         val inputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
         inputDevices.forEach {
             Log.d(TAG, "Input device: ${deviceTypeName(it.type)} id=${it.id}")
         }
 
-        val preferredType = when (audioSetup) {
-            SETUP_WIRED_TO_SPEAKER -> AudioDeviceInfo.TYPE_WIRED_HEADSET
-            else -> AudioDeviceInfo.TYPE_BUILTIN_MIC
+        val preferredDevice = if (audioSetup == SETUP_WIRED_TO_SPEAKER) {
+            // Prefer TYPE_WIRED_HEADSET (native 3.5mm jack) but accept
+            // TYPE_USB_HEADSET too — that's how a USB-C/Lightning-to-3.5mm
+            // adapter's earphone shows up on jack-less phones.
+            inputDevices.firstOrNull { it.type in WIRED_MIC_INPUT_TYPES }
+        } else {
+            inputDevices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_MIC }
         }
-        val preferredDevice = inputDevices.firstOrNull { it.type == preferredType }
         if (preferredDevice != null) {
             val success = audioRecord?.setPreferredDevice(preferredDevice)
-            Log.d(TAG, "Forced input to ${deviceTypeName(preferredType)}, success=$success")
+            Log.d(TAG, "Forced input to ${deviceTypeName(preferredDevice.type)}, success=$success")
         } else {
-            Log.d(TAG, "No ${deviceTypeName(preferredType)} input found, using default routing")
+            Log.d(TAG, "No matching preferred input found for setup=$audioSetup, using default routing")
         }
 
         val usesCommunicationRouting = audioSetup != SETUP_PHONE_MIC_TO_BT_SPEAKER
@@ -391,6 +516,7 @@ class AudioLoopbackService : Service() {
         }
         if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
             Log.e(TAG, "AudioTrack failed to initialize")
+            releaseEchoMitigationEffects()
             audioRecord?.release()
             audioRecord = null
             audioTrack?.release()
@@ -450,6 +576,7 @@ class AudioLoopbackService : Service() {
             audioTrack?.play()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start recording/playback", e)
+            releaseEchoMitigationEffects()
             audioRecord?.release()
             audioRecord = null
             audioTrack?.release()
@@ -474,6 +601,11 @@ class AudioLoopbackService : Service() {
                 while (running) {
                     val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
                     if (read > 0) {
+                        voiceBandFilter?.let { filter ->
+                            for (i in 0 until read) {
+                                buffer[i] = filter.process(buffer[i])
+                            }
+                        }
                         applyVoiceEffect(buffer, read, processed)
                         applyGain(processed, read)
                         audioTrack?.write(processed, 0, read)
@@ -602,6 +734,7 @@ class AudioLoopbackService : Service() {
         loopThread?.join(500)
         loopThread = null
 
+        releaseEchoMitigationEffects()
         audioRecord?.stop()
         audioRecord?.release()
         audioRecord = null
@@ -611,6 +744,7 @@ class AudioLoopbackService : Service() {
         audioTrack = null
 
         pitchShifter = null
+        voiceBandFilter = null
 
         resetAudioMode()
         releaseAudioFocus()
@@ -743,6 +877,15 @@ class AudioLoopbackService : Service() {
 
         const val SETUP_WIRED_TO_SPEAKER = "WIRED_TO_SPEAKER"
         const val SETUP_PHONE_MIC_TO_BT_SPEAKER = "PHONE_MIC_TO_BT_SPEAKER"
+
+        // Jack-less phones report an earphone plugged in via a USB-C/
+        // Lightning dongle as TYPE_USB_HEADSET rather than
+        // TYPE_WIRED_HEADSET. Both are "an earphone with its own mic", so
+        // both should be accepted as the preferred wired input device.
+        val WIRED_MIC_INPUT_TYPES = setOf(
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+        )
 
         const val CHANNEL_ID = "audio_loopback_channel"
         const val NOTIFICATION_ID = 1
