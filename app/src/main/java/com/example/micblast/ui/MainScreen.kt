@@ -29,8 +29,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -40,8 +40,6 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,12 +63,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -153,7 +155,7 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            AudioSetupDropdown(
+            AudioSetupToggleRow(
                 selectedIndex = audioSetupIndex,
                 labels = audioSetupLabels,
                 compactLabels = audioSetupCompactLabels,
@@ -347,88 +349,89 @@ private fun PrimaryActionButton(
 }
 
 @Composable
-private fun AudioSetupDropdown(
+private fun AudioSetupToggleRow(
     selectedIndex: Int,
     labels: List<String>,
     compactLabels: List<String>,
     onSelect: (Int) -> Unit
 ) {
     val colors = MaterialTheme.microBlastColors
-    var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = compactLabels.getOrElse(selectedIndex) {
-        labels.getOrElse(selectedIndex) { labels.firstOrNull().orEmpty() }
-    }
 
     Column {
         SectionHeader(label = stringResource(R.string.audio_setup_label))
 
-        var triggerWidthPx by remember { mutableFloatStateOf(0f) }
-        val density = LocalDensity.current
-
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .onGloballyPositioned { triggerWidthPx = it.size.width.toFloat() }
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(colors.islandAudioSetup)
-                    .border(1.dp, colors.islandAudioSetupBorder, RoundedCornerShape(14.dp))
-                    .clickable { expanded = !expanded }
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Keep the compact label single-line so long device routes
-                // never create an awkward second line on the main screen.
-                Text(
-                    text = selectedLabel,
-                    color = colors.textPrimary,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Only two setups exist, each with its own fixed identity (wired
+            // input vs. Bluetooth output), so they get their own icon and
+            // accent color rather than sharing one — same idea as the accent
+            // per voice mode below, just for a binary choice instead of four.
+            compactLabels.forEachIndexed { index, label ->
+                AudioSetupOption(
+                    label = label,
+                    contentDescription = labels.getOrElse(index) { label },
+                    icon = if (index == 0) Icons.Filled.Headset else Icons.Filled.Bluetooth,
+                    accent = if (index == 0) colors.accentPrimary else colors.accentSecondary,
+                    selected = index == selectedIndex,
+                    onClick = { onSelect(index) },
                     modifier = Modifier.weight(1f)
                 )
-
-                Icon(
-                    imageVector = if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
-                    contentDescription = null,
-                    tint = colors.textSecondary,
-                    modifier = Modifier.size(24.dp)
-                )
             }
+        }
+    }
+}
 
-            // Match the menu's width to the trigger row instead of letting it
-            // shrink-wrap the longest label — a dropdown narrower than what
-            // opened it reads as broken.
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier
-                    .width(with(density) { triggerWidthPx.toDp() })
-                    .background(colors.islandAudioSetup)
-            ) {
-                labels.forEachIndexed { index, label ->
-                    DropdownMenuItem(
-                        text = {
-                            // Plain text only — no icon here. An emoji baked
-                            // into the label fights every theme's accent
-                            // instead of adopting it.
-                            Text(
-                                label,
-                                color = colors.textPrimary,
-                                fontSize = 15.sp,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            onSelect(index)
-                        }
-                    )
-                }
-            }
+@Composable
+private fun AudioSetupOption(
+    label: String,
+    contentDescription: String,
+    icon: ImageVector,
+    accent: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.microBlastColors
+    val background = if (selected) accent.copy(alpha = colors.selectedTileFillAlpha) else colors.islandAudioSetup
+    val borderColor = if (selected) accent else colors.islandAudioSetupBorder
+
+    Box(
+        modifier = modifier
+            .height(64.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(background)
+            .border(1.5.dp, borderColor, RoundedCornerShape(14.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .semantics { this.contentDescription = contentDescription }
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = label,
+                color = accent,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                lineHeight = 14.sp,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
