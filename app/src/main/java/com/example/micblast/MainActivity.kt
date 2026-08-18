@@ -95,10 +95,20 @@ class MainActivity : ComponentActivity() {
 
     // Keeps the UI in sync no matter how the service stops — the in-app
     // Stop button, the notification's Stop action, an incoming call taking
-    // audio focus, or the app being swiped out of recents.
+    // audio focus, the wired earphone being unplugged mid-session, or the
+    // app being swiped out of recents.
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             isRunning = intent?.getBooleanExtra(AudioLoopbackService.EXTRA_RUNNING, false) ?: false
+            val stopReason = intent?.getStringExtra(AudioLoopbackService.EXTRA_STOP_REASON)
+            if (stopReason == AudioLoopbackService.REASON_WIRED_DISCONNECTED) {
+                refreshWiredMicConnected()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Earphone disconnected. Playback disabled",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 

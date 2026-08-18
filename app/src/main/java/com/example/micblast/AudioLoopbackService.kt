@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
+import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioFocusRequest
 import android.media.AudioFormat
@@ -132,12 +133,36 @@ class AudioLoopbackService : Service() {
         }
     }
 
+    // Wired-to-speaker only works because a wired earphone's own mic is
+    // capturing — pull that earphone out mid-session and capture silently
+    // falls back to the phone's built-in mic, which the speaker output
+    // would then instantly feed into. Catching that here (not just as a
+    // pre-flight check before starting) is what makes it safe to leave this
+    // setup running unattended.
+    private val wiredDisconnectCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+            if (!running || audioSetup != SETUP_WIRED_TO_SPEAKER) return
+            val stillConnected = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+                .any { it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET }
+            if (!stillConnected) {
+                Log.d(TAG, "Wired mic disconnected mid-session, stopping loopback")
+                stopLoopback(REASON_WIRED_DISCONNECTED)
+            }
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         createNotificationChannel()
+        // Registered for the service's whole lifetime (not just while
+        // running) so a mid-session unplug is caught even if the app is
+        // backgrounded — the loopback audio thread keeps running as a
+        // foreground service either way, so detection can't depend on the
+        // Activity being visible.
+        audioManager.registerAudioDeviceCallback(wiredDisconnectCallback, mainHandler)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -561,7 +586,7 @@ class AudioLoopbackService : Service() {
         return (shaped * 32767f).toInt().coerceIn(-32768, 32767).toShort()
     }
 
-    private fun stopLoopback() {
+    private fun stopLoopback(stopReason: String? = null) {
         starting = false
 
         if (!running && audioRecord == null && audioTrack == null) {
@@ -569,7 +594,7 @@ class AudioLoopbackService : Service() {
             resetAudioMode()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
-            broadcastState(false)
+            broadcastState(false, stopReason)
             return
         }
 
@@ -592,7 +617,7 @@ class AudioLoopbackService : Service() {
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
-        broadcastState(false)
+        broadcastState(false, stopReason)
     }
 
     private fun resetAudioMode() {
@@ -610,15 +635,19 @@ class AudioLoopbackService : Service() {
         }
     }
 
-    private fun broadcastState(isRunning: Boolean) {
+    private fun broadcastState(isRunning: Boolean, reason: String? = null) {
         val intent = Intent(ACTION_STATE_CHANGED).apply {
             setPackage(packageName)
             putExtra(EXTRA_RUNNING, isRunning)
+            if (reason != null) {
+                putExtra(EXTRA_STOP_REASON, reason)
+            }
         }
         sendBroadcast(intent)
     }
 
     override fun onDestroy() {
+        audioManager.unregisterAudioDeviceCallback(wiredDisconnectCallback)
         if (running) stopLoopback()
         super.onDestroy()
     }
@@ -704,6 +733,8 @@ class AudioLoopbackService : Service() {
         const val EXTRA_INTENSITY = "com.example.micblast.INTENSITY"
         const val ACTION_STATE_CHANGED = "com.example.micblast.STATE_CHANGED"
         const val EXTRA_RUNNING = "com.example.micblast.RUNNING"
+        const val EXTRA_STOP_REASON = "com.example.micblast.STOP_REASON"
+        const val REASON_WIRED_DISCONNECTED = "WIRED_DISCONNECTED"
 
         const val MODE_REVERB = "REVERB"
         const val MODE_CHIPMUNK = "CHIPMUNK"
