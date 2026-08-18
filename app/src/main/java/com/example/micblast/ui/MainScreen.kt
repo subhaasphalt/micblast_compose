@@ -98,6 +98,7 @@ fun MainScreen(
     audioSetupIndex: Int,
     audioSetupLabels: List<String>,
     audioSetupCompactLabels: List<String>,
+    canPlay: Boolean,
     isLocked: Boolean,
     hapticsEnabled: Boolean,
     onPlayClick: () -> Unit,
@@ -144,6 +145,7 @@ fun MainScreen(
             ) {
                 PrimaryActionButton(
                     isRunning = isRunning,
+                    canPlay = canPlay,
                     onPlayClick = { hapticClick(); onPlayClick() },
                     onStopClick = { hapticClick(); onStopClick() }
                 )
@@ -171,7 +173,7 @@ fun MainScreen(
                 currentMode = currentMode,
                 onModeSelect = { mode -> hapticClick(); onModeSelect(mode) },
                 intensityProgress = intensityProgress,
-                // Normal mode uses this slider for reverb amount now, so
+                // Reverb mode uses this slider for reverb amount now, so
                 // it's live in every mode — nothing to disable anymore.
                 intensityEnabled = true,
                 onIntensityChange = onIntensityChange
@@ -236,10 +238,15 @@ private fun TopBar(onMenuClick: () -> Unit, onLockClick: () -> Unit) {
 @Composable
 private fun PrimaryActionButton(
     isRunning: Boolean,
+    canPlay: Boolean,
     onPlayClick: () -> Unit,
     onStopClick: () -> Unit
 ) {
     val colors = MaterialTheme.microBlastColors
+    // Dimmed (but still tappable) rather than hard-disabled: tapping while
+    // dimmed is what surfaces the "plug in a wired earphone" explanation,
+    // so a truly disabled Button would silently swallow the tap instead.
+    val disabledLook = !isRunning && !canPlay
 
     val accent by androidx.compose.animation.animateColorAsState(
         targetValue = if (isRunning) {
@@ -252,7 +259,9 @@ private fun PrimaryActionButton(
     )
 
     Box(
-        modifier = Modifier.size(96.dp),
+        modifier = Modifier
+            .size(96.dp)
+            .alpha(if (disabledLook) 0.45f else 1f),
         contentAlignment = Alignment.Center
     ) {
         // Keep the control visually consistent with the 1.5dp borders used
@@ -536,7 +545,7 @@ private fun ModeAndIntensityGroup(
 ) {
     val colors = MaterialTheme.microBlastColors
     val modes = listOf(
-        VoiceModeUi(AudioLoopbackService.MODE_NORMAL, "Normal", colors.mode1AccentColor),
+        VoiceModeUi(AudioLoopbackService.MODE_REVERB, "Reverb", colors.mode1AccentColor),
         VoiceModeUi(AudioLoopbackService.MODE_CHIPMUNK, "Chipmunk", colors.mode2AccentColor),
         VoiceModeUi(AudioLoopbackService.MODE_DEEP, "Monster", colors.mode3AccentColor),
         VoiceModeUi(AudioLoopbackService.MODE_ROBOT, "Robot", colors.mode4AccentColor)
@@ -658,7 +667,7 @@ private fun IntensityColumn(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Normal",
+            text = "Reverb",
             color = colors.accentPrimary,
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium
@@ -953,6 +962,37 @@ fun ExitConfirmationDialog(
                 Text(
                     text = stringResource(R.string.exit_confirm_cancel),
                     color = colors.accentPrimary
+                )
+            }
+        }
+    )
+}
+
+/**
+ * Shown when Play (or a live setup switch) is attempted on the wired-to-
+ * speaker setup with no wired earphone mic detected — starting anyway would
+ * route the phone's own speaker straight back into its built-in mic and
+ * cause an instant feedback loop.
+ */
+@Composable
+fun WiredMicRequiredDialog(
+    onDismiss: () -> Unit
+) {
+    val colors = MaterialTheme.microBlastColors
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.surface,
+        titleContentColor = colors.textPrimary,
+        textContentColor = colors.textSecondary,
+        title = { Text(stringResource(R.string.wired_mic_required_title)) },
+        text = { Text(stringResource(R.string.wired_mic_required_message)) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.wired_mic_required_ok),
+                    color = colors.accentSecondary,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

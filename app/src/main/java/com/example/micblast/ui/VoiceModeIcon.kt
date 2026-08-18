@@ -20,7 +20,7 @@ fun voiceModeIconRes(modeId: String): Int = when (modeId) {
     AudioLoopbackService.MODE_CHIPMUNK -> R.drawable.ic_voice_chipmunk
     AudioLoopbackService.MODE_DEEP -> R.drawable.ic_voice_monster
     AudioLoopbackService.MODE_ROBOT -> R.drawable.ic_voice_robot
-    else -> R.drawable.ic_voice_normal
+    else -> R.drawable.ic_voice_reverb
 }
 
 @Composable

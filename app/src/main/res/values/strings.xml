@@ -27,20 +27,20 @@
     <string name="exit_confirm_cancel">Cancel</string>
     <string name="audio_setup_label">Audio Setup</string>
     <string name="setup_wired">Wired earphone mic → phone speaker</string>
-    <string name="setup_bt_mic">Bluetooth earbuds mic → phone speaker</string>
     <string name="setup_bt_speaker">Phone mic → Bluetooth speaker / boombox</string>
     <string name="lock_button">🔒</string>
     <string name="lock_button_cd">Lock controls</string>
     <string name="slide_to_unlock">Slide to unlock</string>
+    <string name="wired_mic_required_title">Wired earphone not connected</string>
+    <string name="wired_mic_required_message">This mode needs a wired earphone with a mic plugged in. Without one, the phone\'s speaker and mic will feed into each other and cause a loud feedback loop. Plug in a wired earphone, then try again.</string>
+    <string name="wired_mic_required_ok">Got it</string>
 
     <string-array name="audio_setup_options">
         <item>@string/setup_wired</item>
-        <item>@string/setup_bt_mic</item>
         <item>@string/setup_bt_speaker</item>
     </string-array>
     <string-array name="audio_setup_compact_options">
         <item>Wired mic → Phone speaker</item>
-        <item>Bluetooth mic → Phone speaker</item>
         <item>Phone mic → Bluetooth speaker</item>
     </string-array>
 </resources>

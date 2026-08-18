@@ -5,10 +5,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
@@ -26,7 +24,6 @@ import android.os.Process
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
-import androidx.core.content.ContextCompat
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.roundToInt
@@ -83,7 +80,7 @@ class AudioLoopbackService : Service() {
     @Volatile
     private var ringModPhase = 0.0
 
-    // Normal mode's reverb: a Schroeder-style bank of 4 parallel combs
+    // Reverb mode's reverb: a Schroeder-style bank of 4 parallel combs
     // feeding 2 series all-pass filters. Delay lengths are the classic
     // Freeverb values (in samples, tuned for ~44.1kHz), which is why
     // sampleRate isn't threaded through here — this app always runs at a
@@ -97,7 +94,7 @@ class AudioLoopbackService : Service() {
     )
 
     @Volatile
-    private var currentMode = MODE_NORMAL
+    private var currentMode = MODE_REVERB
 
     private var audioSetup = SETUP_WIRED_TO_SPEAKER
     private var sampleRate = 44100
@@ -115,15 +112,12 @@ class AudioLoopbackService : Service() {
     private var running = false
 
     // True from the moment startLoopback() is called until beginAudioPipeline()
-    // finishes (or aborts). Covers the async Bluetooth SCO connect window,
-    // where `running` is still false but a second ACTION_START would otherwise
-    // re-register scoReceiver and crash with "Receiver already registered".
+    // finishes (or aborts). Guards against a second ACTION_START landing
+    // while a start is already in flight.
     @Volatile
     private var starting = false
 
-    private var scoReceiverRegistered = false
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var scoTimeoutRunnable: Runnable? = null
 
     private lateinit var audioManager: AudioManager
 
@@ -134,20 +128,6 @@ class AudioLoopbackService : Service() {
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 Log.d(TAG, "Audio focus lost ($focusChange) — stopping loopback")
                 stopLoopback()
-            }
-        }
-    }
-
-    private val scoReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val state = intent?.getIntExtra(
-                AudioManager.EXTRA_SCO_AUDIO_STATE,
-                AudioManager.SCO_AUDIO_STATE_ERROR
-            )
-            Log.d(TAG, "SCO state update: $state")
-            if (state == AudioManager.SCO_AUDIO_STATE_CONNECTED) {
-                scoTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
-                beginAudioPipeline()
             }
         }
     }
@@ -163,7 +143,7 @@ class AudioLoopbackService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                currentMode = intent.getStringExtra(EXTRA_MODE) ?: MODE_NORMAL
+                currentMode = intent.getStringExtra(EXTRA_MODE) ?: MODE_REVERB
                 audioSetup = intent.getStringExtra(EXTRA_AUDIO_SETUP) ?: SETUP_WIRED_TO_SPEAKER
                 gain = intent.getFloatExtra(EXTRA_GAIN, 1f).coerceIn(1f, 2f)
                 intensity = intent.getFloatExtra(EXTRA_INTENSITY, 0.5f)
@@ -171,7 +151,7 @@ class AudioLoopbackService : Service() {
             }
             ACTION_STOP -> stopLoopback()
             ACTION_CHANGE_MODE -> {
-                val mode = intent.getStringExtra(EXTRA_MODE) ?: MODE_NORMAL
+                val mode = intent.getStringExtra(EXTRA_MODE) ?: MODE_REVERB
                 changeMode(mode)
                 updateNotification()
             }
@@ -275,30 +255,7 @@ class AudioLoopbackService : Service() {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         )
 
-        if (audioSetup == SETUP_BT_MIC_TO_SPEAKER) {
-            // Bluetooth mic capture only works over the SCO (call-audio)
-            // link, not the regular streaming link — so we have to ask
-            // Android to open that link first, then wait for it to
-            // actually connect before touching AudioRecord.
-            val filter = IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)
-            ContextCompat.registerReceiver(
-                this, scoReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED
-            )
-            scoReceiverRegistered = true
-
-            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-            audioManager.startBluetoothSco()
-            audioManager.isBluetoothScoOn = true
-
-            val timeout = Runnable {
-                Log.d(TAG, "SCO connect timed out, proceeding anyway")
-                beginAudioPipeline()
-            }
-            scoTimeoutRunnable = timeout
-            mainHandler.postDelayed(timeout, 4000)
-        } else {
-            beginAudioPipeline()
-        }
+        beginAudioPipeline()
     }
 
     private fun beginAudioPipeline() {
@@ -327,17 +284,14 @@ class AudioLoopbackService : Service() {
         val recBufSize = minRecBuf * 2
         val playBufSize = minPlayBuf * 2
 
-        val chosenSource = when (audioSetup) {
-            SETUP_BT_MIC_TO_SPEAKER -> MediaRecorder.AudioSource.VOICE_COMMUNICATION
-            else -> {
-                val unprocessedSupported = "true" == audioManager.getProperty(
-                    AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED
-                )
-                if (unprocessedSupported) {
-                    MediaRecorder.AudioSource.UNPROCESSED
-                } else {
-                    MediaRecorder.AudioSource.VOICE_RECOGNITION
-                }
+        val chosenSource = run {
+            val unprocessedSupported = "true" == audioManager.getProperty(
+                AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED
+            )
+            if (unprocessedSupported) {
+                MediaRecorder.AudioSource.UNPROCESSED
+            } else {
+                MediaRecorder.AudioSource.VOICE_RECOGNITION
             }
         }
         Log.d(TAG, "audioSetup=$audioSetup, chosenSource=$chosenSource, mode=$currentMode")
@@ -369,7 +323,6 @@ class AudioLoopbackService : Service() {
 
         val preferredType = when (audioSetup) {
             SETUP_WIRED_TO_SPEAKER -> AudioDeviceInfo.TYPE_WIRED_HEADSET
-            SETUP_BT_MIC_TO_SPEAKER -> AudioDeviceInfo.TYPE_BLUETOOTH_SCO
             else -> AudioDeviceInfo.TYPE_BUILTIN_MIC
         }
         val preferredDevice = inputDevices.firstOrNull { it.type == preferredType }
@@ -516,18 +469,10 @@ class AudioLoopbackService : Service() {
     }
 
     // Cleans up whatever was already set up (foreground notification, audio
-    // focus, SCO) when startup can't continue, so the service doesn't get
-    // stuck showing a "live" notification for a session that never started.
+    // focus) when startup can't continue, so the service doesn't get stuck
+    // showing a "live" notification for a session that never started.
     private fun abortStartup() {
         starting = false
-        if (scoReceiverRegistered) {
-            unregisterReceiver(scoReceiver)
-            scoReceiverRegistered = false
-        }
-        if (audioManager.isBluetoothScoOn) {
-            audioManager.isBluetoothScoOn = false
-            audioManager.stopBluetoothSco()
-        }
         resetAudioMode()
         releaseAudioFocus()
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -562,7 +507,7 @@ class AudioLoopbackService : Service() {
                 }
                 if (ringModPhase > 1.0) ringModPhase %= 1.0
             }
-            MODE_NORMAL -> {
+            MODE_REVERB -> {
                 if (intensity <= 0.001f) {
                     System.arraycopy(input, 0, output, 0, len)
                 } else {
@@ -575,7 +520,7 @@ class AudioLoopbackService : Service() {
         }
     }
 
-    // Normal mode's "jansabha PA" reverb. Feedback and wet mix both climb
+    // Reverb mode's "jansabha PA" reverb. Feedback and wet mix both climb
     // with intensity but stay well short of 1.0 even at max — that keeps
     // the tail decaying (a long, boomy echo) instead of building into an
     // actual runaway squeal like a mic too close to a speaker.
@@ -618,16 +563,6 @@ class AudioLoopbackService : Service() {
 
     private fun stopLoopback() {
         starting = false
-        scoTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
-        scoTimeoutRunnable = null
-        if (scoReceiverRegistered) {
-            unregisterReceiver(scoReceiver)
-            scoReceiverRegistered = false
-        }
-        if (audioManager.isBluetoothScoOn) {
-            audioManager.isBluetoothScoOn = false
-            audioManager.stopBluetoothSco()
-        }
 
         if (!running && audioRecord == null && audioTrack == null) {
             releaseAudioFocus()
@@ -713,17 +648,16 @@ class AudioLoopbackService : Service() {
             MODE_CHIPMUNK -> "Chipmunk"
             MODE_DEEP -> "Monster"
             MODE_ROBOT -> "Robot"
-            else -> "Normal"
+            else -> "Reverb"
         }
 
         val setupLabel = when (audioSetup) {
-            SETUP_BT_MIC_TO_SPEAKER -> "Bluetooth mic → phone speaker"
             SETUP_PHONE_MIC_TO_BT_SPEAKER -> "Phone mic → Bluetooth speaker"
             else -> "Wired mic → phone speaker"
         }
 
         val gainLabel = "Boost %.1f×".format(gain)
-        val intensityLabel = if (currentMode == MODE_NORMAL) {
+        val intensityLabel = if (currentMode == MODE_REVERB) {
             "Reverb: ${(intensity * 100f).roundToInt()}%"
         } else {
             "Intensity: ${(intensity * 100f).roundToInt()}%"
@@ -771,13 +705,12 @@ class AudioLoopbackService : Service() {
         const val ACTION_STATE_CHANGED = "com.example.micblast.STATE_CHANGED"
         const val EXTRA_RUNNING = "com.example.micblast.RUNNING"
 
-        const val MODE_NORMAL = "NORMAL"
+        const val MODE_REVERB = "REVERB"
         const val MODE_CHIPMUNK = "CHIPMUNK"
         const val MODE_DEEP = "DEEP"
         const val MODE_ROBOT = "ROBOT"
 
         const val SETUP_WIRED_TO_SPEAKER = "WIRED_TO_SPEAKER"
-        const val SETUP_BT_MIC_TO_SPEAKER = "BT_MIC_TO_SPEAKER"
         const val SETUP_PHONE_MIC_TO_BT_SPEAKER = "PHONE_MIC_TO_BT_SPEAKER"
 
         const val CHANNEL_ID = "audio_loopback_channel"

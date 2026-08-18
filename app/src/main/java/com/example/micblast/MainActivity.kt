@@ -7,6 +7,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.view.OrientationEventListener
@@ -24,6 +27,7 @@ import androidx.core.content.ContextCompat
 import com.example.micblast.ui.ExitConfirmationDialog
 import com.example.micblast.ui.MainScreen
 import com.example.micblast.ui.SettingsScreen
+import com.example.micblast.ui.WiredMicRequiredDialog
 import com.example.micblast.ui.theme.AppThemes
 import com.example.micblast.ui.theme.DefaultTheme
 import com.example.micblast.ui.theme.MicBlastTheme
@@ -35,13 +39,15 @@ class MainActivity : ComponentActivity() {
     // everything under it) is a pure function of these values — it never
     // reaches into the service or Android APIs itself.
     private var isRunning by mutableStateOf(false)
-    private var currentMode by mutableStateOf(AudioLoopbackService.MODE_NORMAL)
+    private var currentMode by mutableStateOf(AudioLoopbackService.MODE_REVERB)
     private var gainProgress by mutableIntStateOf(0) // 0-100 -> 1.0x-2.0x
     private var intensityProgress by mutableIntStateOf(50)
     private var audioSetupIndex by mutableIntStateOf(0)
     private var isLocked by mutableStateOf(false)
     private var showSettings by mutableStateOf(false)
     private var showExitConfirmation by mutableStateOf(false)
+    private var showWiredMicRequired by mutableStateOf(false)
+    private var wiredMicConnected by mutableStateOf(false)
     private var darkTheme by mutableStateOf(false)
     private var themeId by mutableStateOf(DefaultTheme.id)
     private var autoRotate by mutableStateOf(true)
@@ -51,10 +57,37 @@ class MainActivity : ComponentActivity() {
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    private val audioManager by lazy {
+        getSystemService(AudioManager::class.java)
+    }
+
+    // The wired-to-speaker setup feeds the phone's own speaker output right
+    // back into whatever mic is capturing — harmless (and the whole point)
+    // when a wired earphone's mic is doing the capturing, but an instant
+    // screeching feedback loop if it falls back to the phone's built-in mic
+    // instead. This tracks live whether a wired mic is actually plugged in,
+    // so the UI can refuse to start (and explain why) rather than let that
+    // happen.
+    private val wiredDeviceCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+            refreshWiredMicConnected()
+        }
+
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+            refreshWiredMicConnected()
+        }
+    }
+
+    private fun refreshWiredMicConnected() {
+        wiredMicConnected = audioManager
+            ?.getDevices(AudioManager.GET_DEVICES_INPUTS)
+            ?.any { it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET }
+            ?: false
+    }
+
     // Audio setup order must match R.array.audio_setup_options.
     private val audioSetupValues = listOf(
         AudioLoopbackService.SETUP_WIRED_TO_SPEAKER,
-        AudioLoopbackService.SETUP_BT_MIC_TO_SPEAKER,
         AudioLoopbackService.SETUP_PHONE_MIC_TO_BT_SPEAKER,
     )
 
@@ -75,7 +108,6 @@ class MainActivity : ComponentActivity() {
     private var pendingLoopbackAction: (() -> Unit)? = null
 
     // RequestMultiplePermissions instead of a single RECORD_AUDIO request so
-    // BLUETOOTH_CONNECT (needed for the Bluetooth mic setup on API 31+) and
     // POST_NOTIFICATIONS (needed to actually show the "live" notification on
     // API 33+) can be asked for in the same system dialog.
     private val requestPermissionsLauncher = registerForActivityResult(
@@ -84,10 +116,6 @@ class MainActivity : ComponentActivity() {
         val micGranted = ContextCompat.checkSelfPermission(
             this, Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
-        val btGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            ContextCompat.checkSelfPermission(
-                this, Manifest.permission.BLUETOOTH_CONNECT
-            ) == PackageManager.PERMISSION_GRANTED
 
         val action = pendingLoopbackAction
         pendingLoopbackAction = null
@@ -95,8 +123,6 @@ class MainActivity : ComponentActivity() {
         when {
             !micGranted ->
                 Toast.makeText(this, "Microphone permission is required", Toast.LENGTH_LONG).show()
-            selectedAudioSetup() == AudioLoopbackService.SETUP_BT_MIC_TO_SPEAKER && !btGranted ->
-                Toast.makeText(this, "Bluetooth permission is required for this audio setup", Toast.LENGTH_LONG).show()
             else -> action?.invoke()
         }
         // POST_NOTIFICATIONS is intentionally not checked here — if it's
@@ -104,26 +130,15 @@ class MainActivity : ComponentActivity() {
         // "live" notification just won't be visible.
     }
 
-    // Figures out which permissions are still missing for the given audio
-    // setup. includeNotifications is left off for the "already running,
-    // just switching setups" path — the notification is already showing at
-    // that point, so there's nothing new to ask for there.
-    private fun missingPermissionsFor(setup: String, includeNotifications: Boolean): List<String> {
+    // Figures out which permissions are still missing to run loopback.
+    // includeNotifications is left off for the "already running, just
+    // switching setups" path — the notification is already showing at that
+    // point, so there's nothing new to ask for there.
+    private fun missingPermissionsFor(includeNotifications: Boolean): List<String> {
         val needed = mutableListOf<String>()
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             needed += Manifest.permission.RECORD_AUDIO
-        }
-
-        // Only the Bluetooth *mic* setup touches startBluetoothSco(), which
-        // has required BLUETOOTH_CONNECT at runtime since API 31. The
-        // phone-mic-to-Bluetooth-speaker setup only reads output device
-        // info, which doesn't need it.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            setup == AudioLoopbackService.SETUP_BT_MIC_TO_SPEAKER &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
-        ) {
-            needed += Manifest.permission.BLUETOOTH_CONNECT
         }
 
         if (includeNotifications &&
@@ -147,8 +162,8 @@ class MainActivity : ComponentActivity() {
             .resolveDarkTheme(settingsPrefs.getBoolean(KEY_DARK_THEME, false))
         autoRotate = settingsPrefs.getBoolean(KEY_AUTO_ROTATE, true)
         hapticsEnabled = settingsPrefs.getBoolean(KEY_HAPTICS, true)
-        currentMode = settingsPrefs.getString(KEY_MODE, AudioLoopbackService.MODE_NORMAL)
-            ?: AudioLoopbackService.MODE_NORMAL
+        currentMode = settingsPrefs.getString(KEY_MODE, AudioLoopbackService.MODE_REVERB)
+            ?: AudioLoopbackService.MODE_REVERB
         gainProgress = settingsPrefs.getInt(KEY_GAIN_PROGRESS, 0).coerceIn(0, 100)
         intensityProgress = settingsPrefs.getInt(KEY_INTENSITY_PROGRESS, 50).coerceIn(0, 100)
         audioSetupIndex = settingsPrefs.getInt(KEY_AUDIO_SETUP_INDEX, 0)
@@ -198,6 +213,7 @@ class MainActivity : ComponentActivity() {
                         audioSetupIndex = audioSetupIndex,
                         audioSetupLabels = stringArrayResource(R.array.audio_setup_options).toList(),
                         audioSetupCompactLabels = stringArrayResource(R.array.audio_setup_compact_options).toList(),
+                        canPlay = selectedAudioSetup() != AudioLoopbackService.SETUP_WIRED_TO_SPEAKER || wiredMicConnected,
                         isLocked = isLocked,
                         hapticsEnabled = hapticsEnabled,
                         onPlayClick = ::onPlayRequested,
@@ -209,6 +225,12 @@ class MainActivity : ComponentActivity() {
                         onLockClick = { isLocked = true },
                         onUnlock = { isLocked = false },
                         onMenuClick = { showSettings = true },
+                    )
+                }
+
+                if (showWiredMicRequired) {
+                    WiredMicRequiredDialog(
+                        onDismiss = { showWiredMicRequired = false },
                     )
                 }
 
@@ -267,7 +289,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onPlayRequested() {
-        val needed = missingPermissionsFor(selectedAudioSetup(), includeNotifications = true)
+        if (selectedAudioSetup() == AudioLoopbackService.SETUP_WIRED_TO_SPEAKER && !wiredMicConnected) {
+            showWiredMicRequired = true
+            return
+        }
+        val needed = missingPermissionsFor(includeNotifications = true)
         if (needed.isEmpty()) {
             startLoopback()
         } else {
@@ -312,10 +338,15 @@ class MainActivity : ComponentActivity() {
     // There's a brief (sub-second) gap in audio while the new pipeline
     // spins up, but no manual Stop/Play needed from the user.
     private fun onAudioSetupSelected(index: Int) {
+        val newSetup = audioSetupValues.getOrElse(index) { AudioLoopbackService.SETUP_WIRED_TO_SPEAKER }
+        if (isRunning && newSetup == AudioLoopbackService.SETUP_WIRED_TO_SPEAKER && !wiredMicConnected) {
+            showWiredMicRequired = true
+            return
+        }
         audioSetupIndex = index
         settingsPrefs.edit().putInt(KEY_AUDIO_SETUP_INDEX, index).apply()
         if (isRunning) {
-            val needed = missingPermissionsFor(selectedAudioSetup(), includeNotifications = false)
+            val needed = missingPermissionsFor(includeNotifications = false)
             if (needed.isEmpty()) {
                 restartWithNewSetup()
             } else {
@@ -436,11 +467,14 @@ class MainActivity : ComponentActivity() {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(stateReceiver, filter)
         }
+        refreshWiredMicConnected()
+        audioManager?.registerAudioDeviceCallback(wiredDeviceCallback, null)
     }
 
     override fun onStop() {
         super.onStop()
         unregisterReceiver(stateReceiver)
+        audioManager?.unregisterAudioDeviceCallback(wiredDeviceCallback)
     }
 
     // Gain/intensity change continuously while dragging their sliders, so
